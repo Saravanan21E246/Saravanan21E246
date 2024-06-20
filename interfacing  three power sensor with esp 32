@@ -1,0 +1,84 @@
+#include <HardwareSerial.h>
+#include <PZEM004T.h>
+
+HardwareSerial pzemSerial1(1); // UART1
+HardwareSerial pzemSerial2(2); // UART2
+HardwareSerial pzemSerial3(3); // UART3
+
+PZEM004T pzem1;
+PZEM004T pzem2;
+PZEM004T pzem3;
+
+void setup() {
+  Serial.begin(115200);
+
+  pzem1.setAddress(0x00); 
+  pzem2.setAddress(0x01); 
+  pzem3.setAddress(0x02);
+
+  pzemSerial1.begin(9600, SERIAL_8N1, RX_PIN1, TX_PIN1);
+  pzemSerial2.begin(9600, SERIAL_8N1, RX_PIN2, TX_PIN2);
+  pzemSerial3.begin(9600, SERIAL_8N1, RX_PIN3, TX_PIN3);
+}
+
+void loop() {
+ 
+  float voltage1 = pzem1.voltage(pzemSerial1);
+  float current1 = pzem1.current(pzemSerial1);
+  float power1 = pzem1.power(pzemSerial1);
+  float energy1 = pzem1.energy(pzemSerial1);
+
+  float voltage2 = pzem2.voltage(pzemSerial2);
+  float current2 = pzem2.current(pzemSerial2);
+  float power2 = pzem2.power(pzemSerial2);
+  float energy2 = pzem2.energy(pzemSerial2);
+
+  float voltage3 = pzem3.voltage(pzemSerial3);
+  float current3 = pzem3.current(pzemSerial3);
+  float power3 = pzem3.power(pzemSerial3);
+  float energy3 = pzem3.energy(pzemSerial3);
+
+  Serial.println("Sensor 1:");
+  Serial.print("Voltage: ");
+  Serial.print(voltage1);
+  Serial.println(" V");
+  Serial.print("Current: ");
+  Serial.print(current1);
+  Serial.println(" A");
+  Serial.print("Power: ");
+  Serial.print(power1);
+  Serial.println(" W");
+  Serial.print("Energy: ");
+  Serial.print(energy1);
+  Serial.println(" Wh");
+
+  Serial.println("Sensor 2:");
+  Serial.print("Voltage: ");
+  Serial.print(voltage2);
+  Serial.println(" V");
+  Serial.print("Current: ");
+  Serial.print(current2);
+  Serial.println(" A");
+  Serial.print("Power: ");
+  Serial.print(power2);
+  Serial.println(" W");
+  Serial.print("Energy: ");
+  Serial.print(energy2);
+  Serial.println(" Wh");
+
+  Serial.println("Sensor 3:");
+  Serial.print("Voltage: ");
+  Serial.print(voltage3);
+  Serial.println(" V");
+  Serial.print("Current: ");
+  Serial.print(current3);
+  Serial.println(" A");
+  Serial.print("Power: ");
+  Serial.print(power3);
+  Serial.println(" W");
+  Serial.print("Energy: ");
+  Serial.print(energy3);
+  Serial.println(" Wh");
+
+  delay(2000); 
+}

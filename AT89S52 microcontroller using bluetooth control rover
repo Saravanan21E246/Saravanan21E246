@@ -1,0 +1,96 @@
+#include<AT89S52.h>
+#define motor1A = P1_0;
+#define motor1B = P1_1;
+#define motor2A = P1_2;
+#define motor2B = P1_3;
+
+#define BT_RX = P3_0;
+#define BT_TX = P3_1; 
+
+char command;
+
+void serial_init() {
+    TMOD = 0x20;
+    TH1 = 0xFD; 
+    SCON = 0x50; 
+    TR1 = 1;
+}
+
+void serial_tx(char c) {
+    SBUF = c;
+    while(TI == 0);
+    TI = 0;
+}
+
+void motor_stop() {
+     P0_0 = 0;
+     P0_1 = 0;
+     P0_2 = 0;
+     P0_3 = 0; 
+}
+
+void motor_forward() {
+     P0_0 = 1;
+     P0_1 = 0;
+     P0_2 = 1;
+     P0_3 = 0;
+}
+
+void motor_backward() {
+     P0_0 = 0;
+     P0_1 = 1;
+     P0_2 = 0;
+     P0_3 = 1;
+}
+
+void motor_left() {
+     P0_0 = 0;
+     P0_1 = 1;
+     P0_2 = 1;
+     P0_3 = 0;
+}
+
+void motor_right() {
+     P0_0 = 1;
+     P0_1 = 0;
+     P0_2 = 0;
+     P0_3 = 1;
+}
+
+void main() {
+    serial_init();
+    motor_stop(); 
+    
+    while(1) {
+        if(RI == 1) { 
+            command = SBUF;
+            RI = 0; 
+            
+            switch(command) {
+                case '1':
+                    motor_forward();
+                    serial_tx('O');
+                    break;
+                case '2':
+                    motor_backward();
+                    serial_tx('O');
+                    break;
+                case '3':
+                    motor_left();
+                    serial_tx('O');
+                    break;
+                case '4':
+                    motor_right();
+                    serial_tx('O');
+                    break;
+                case '5':
+                    motor_stop();
+                    serial_tx('O');
+                    break;
+                default:
+                    serial_tx('E');
+                    break;
+            }
+        }
+    }
+}

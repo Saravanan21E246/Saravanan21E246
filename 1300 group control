@@ -1,0 +1,123 @@
+#include <WiFi.h>
+#include <WiFiClient.h> 
+#include <WebServer.h>
+#include <HTTPClient.h>
+#include <PZEM004Tv30.h>
+#define  host1 "https://pgcresearch.pavantech.in/SIH1328/pages/Getstatus.php"
+
+#if !defined(PZEM_RX_PIN) && !defined(PZEM_TX_PIN)
+#define PZEM_RX_PIN 16
+#define PZEM_TX_PIN 17
+#endif
+#if !defined(PZEM_SERIAL)
+#define PZEM_SERIAL Serial2
+#endif
+#if defined(ESP32)
+PZEM004Tv30 pzem(PZEM_SERIAL, PZEM_RX_PIN, PZEM_TX_PIN);
+#elif defined(ESP8266)
+#else
+PZEM004Tv30 pzem(PZEM_SERIAL);
+#endif
+int Led_OnBoard = 2;                  
+                  
+const char* ssid = "iot";  // Streetlight                    
+ const char* password = "1234567891055"; // eee123!@#
+
+ void setup() {
+ Serial.begin(115200);
+ 
+  delay(1000);
+  pinMode(Led_OnBoard, OUTPUT);       
+   pinMode(4,OUTPUT);
+  WiFi.mode(WIFI_OFF);        
+  delay(1000);
+ WiFi.mode(WIFI_STA);        
+  
+  WiFi.begin(ssid, password);     
+  Serial.println("");
+
+  Serial.print("Connecting"); 
+   
+  while (WiFi.status() != WL_CONNECTED) {
+    digitalWrite(Led_OnBoard, LOW);
+    delay(250);
+    Serial.print(".");
+    digitalWrite(Led_OnBoard, HIGH);
+    delay(250);
+  }
+
+  digitalWrite(Led_OnBoard, HIGH);
+ 
+  Serial.println("");
+  Serial.println("Connected to Network/SSID");
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP()); 
+}
+
+void loop() {
+
+  if(WiFi.status()== WL_CONNECTED){
+        
+      WiFiClient client;
+      HTTPClient http;   
+                                                                          
+    float voltage = pzem.voltage();
+    float current = pzem.current();
+    float power = pzem.power();
+    float energy = pzem.energy();
+    float frequency = pzem.frequency();
+    float pf = pzem.pf(); 
+  
+String Load_1VoltagePost,Load_1CurrentPost,Load_2CurrentPost,Load_3CurrentPost,Load_4CurrentPost,Load_5CurrentPost,postData;
+   double Load_1Voltage=voltage;
+   double  Load_1Current=current;
+   double  Load_2Current=power;
+   double  Load_3Current=frequency;
+   double  Load_4Current=pf;
+   double  Load_5Current=energy;
+delay(1000);
+
+  Load_1VoltagePost = String(Load_1Voltage);  
+  Load_1CurrentPost = String(Load_1Current);  
+  Load_2CurrentPost = String(Load_2Current);
+  Load_3CurrentPost = String(Load_3Current);
+  Load_4CurrentPost = String(Load_4Current);
+  Load_5CurrentPost = String(Load_5Current);
+  postData ="Load_1Voltage=" + Load_1VoltagePost + "&Load_1Current=" + Load_1CurrentPost +"&Load_2Current=" + Load_2CurrentPost+"&Load_3Current=" + Load_3CurrentPost+"&Load_4Current=" + Load_4CurrentPost+"&Load_5Current=" + Load_5CurrentPost ;
+
+   http.begin(client,"http://pgcresearch.pavantech.in/LoadMonitor_IoT/InsertDB.php");
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");    
+ 
+  int httpCode = http.POST(postData);   
+  String payload = http.getString();    
+
+ 
+  Serial.println(httpCode);   
+  Serial.println(payload);   
+ 
+  Serial.println("Load_1Voltage=" + Load_1VoltagePost + "&Load_1Current=" + Load_1CurrentPost +"&Load_2Current=" + Load_2CurrentPost+"&Load_3Current=" + Load_3CurrentPost+"&Load_4Current=" + Load_4CurrentPost+"&Load_5Current=" + Load_5CurrentPost);
+   
+
+  http.end();  
+
+  delay(4000);  
+  digitalWrite(Led_OnBoard, LOW);
+  delay(1000);
+  digitalWrite(Led_OnBoard, HIGH);
+          }
+  HTTPClient http1;
+  http1.begin(host1);
+  http1.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  int httpCode1=http1.GET();
+  String payload=http1.getString(); // get data from webhost continously
+  Serial.println(payload);
+  if(payload == "1")  
+  {
+    digitalWrite(4,LOW);
+    }
+   else if (payload == "0") 
+   {
+    digitalWrite(4,HIGH);
+    }
+  // d
+  }

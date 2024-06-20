@@ -1,0 +1,65 @@
+#include <LiquidCrystal.h>
+LiquidCrystal lcd(2,3,4,5,6,7);
+int count=0;
+void setup() {
+  Serial.begin(9600);
+  lcd.begin(16, 2);
+  pinMode(8,INPUT);
+  pinMode(9,INPUT);
+  pinMode(10,OUTPUT);
+  pinMode(11,OUTPUT);
+  lcd.setCursor(0, 0);
+  lcd.print("welcome to");
+  lcd.setCursor(0, 1);
+  lcd.print("our project");
+  delay(2000);
+  digitalWrite(10,1);
+  digitalWrite(11,1);
+}
+
+void loop() {
+  int x= digitalRead(8);
+  int y= digitalRead(9);
+  lcd.clear();
+  if(x==0){
+   digitalWrite(10,0);
+  lcd.setCursor(0, 0);
+  lcd.print("Rest Room");
+  lcd.setCursor(0, 1);
+  lcd.print("Light ON");
+   delay(2000); 
+  }else{
+  digitalWrite(10,1);
+  lcd.print("Rest Room");
+  lcd.setCursor(0, 1);
+  lcd.print("Light off");
+   delay(1000); 
+    }
+  if(y==0){
+  count++;
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("person=");
+  lcd.print(count);
+  delay(1000); 
+  }else{
+    lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("No person"); 
+  delay(1000);
+  }
+  if(count>=10){
+  digitalWrite(11,0);
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Room Fan");
+  lcd.setCursor(0, 1);
+  lcd.print("Is ON");
+   delay(2000); 
+  }else{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Less count");
+  delay(1000);
+  }
+}

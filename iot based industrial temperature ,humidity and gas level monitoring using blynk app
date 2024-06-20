@@ -1,0 +1,62 @@
+#define BLYNK_TEMPLATE_ID "xxxxxxxxxxxxxxxxxxxxxxxxx"
+#define BLYNK_TEMPLATE_NAME "industrial automation"
+#define BLYNK_AUTH_TOKEN "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+#define BLYNK_PRINT Serial
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+#include <DHT.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+#define DHTPIN D3    
+#define DHTTYPE DHT11
+   
+char auth[] = BLYNK_AUTH_TOKEN;
+
+char ssid[] = "hello";
+char pass[] = "123456789";
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(D5,OUTPUT);
+    Wire.begin();
+  lcd.init();
+  lcd.backlight();
+  Blynk.begin(auth, ssid, pass);
+  dht.begin();
+}
+
+void loop() {
+  Blynk.run();
+
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+
+  if (!isnan(humidity) && !isnan(temperature)) {
+    Blynk.virtualWrite(V2, humidity);
+    Blynk.virtualWrite(V1, temperature);  
+  }
+  int value = analogRead(A0);
+  int value1 = map(value, 0, 1024, 0, 100);
+  int value2 = (value - 100) * -1;
+  Blynk.virtualWrite(V0, value2);
+ 
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("humidity=");
+    lcd.print(humidity);
+    lcd.setCursor(0, 1);
+    lcd.print("temperature=");
+    lcd.print(temperature);
+    delay(2000);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("gas=");
+    lcd.print(value2);
+    delay(1000);
+}

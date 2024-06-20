@@ -1,0 +1,153 @@
+#include <PZEM004Tv30.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+PZEM004Tv30 pzem(D3, D4);
+PZEM004Tv30 pzem1(D5, D6);
+
+void setup() {
+Serial.begin(9600);
+lcd.init();
+lcd.backlight();
+lcd.setCursor(0, 0);
+lcd.print("smart switch box");
+lcd.setCursor(0, 1);
+lcd.print("Batch 11");
+delay(3000);
+lcd.clear();
+}
+
+void loop() {
+float voltage = pzem.voltage();
+if (voltage != NAN) {
+Serial.print("Voltage: ");
+Serial.print(voltage);
+Serial.println("V");
+lcd.setCursor(0, 0);
+lcd.print("V:");
+lcd.print(voltage);
+} else {
+Serial.println("Error reading voltage");
+}
+float current =  pzem.current();
+if (current != NAN) {
+Serial.print("Current: ");
+Serial.print(current);
+Serial.println("A");
+lcd.setCursor(0, 1);
+lcd.print("I:");
+lcd.print(current);
+} else {
+Serial.println("Error reading current");
+}
+float power = pzem.power();
+if (current != NAN) {
+Serial.print("Power: ");
+Serial.print(power);
+Serial.println("W");
+lcd.setCursor(7, 0);
+lcd.print("P:");
+lcd.print(power);
+} else {
+Serial.println("Error reading power");
+}
+float energy = pzem.energy();
+if (current != NAN) {
+Serial.print("Energy: ");
+Serial.print(energy, 3);
+Serial.println("kWh");
+} else {
+Serial.println("Error reading energy");
+}
+float frequency = pzem.frequency();
+if (current != NAN) {
+Serial.print("Frequency: ");
+Serial.print(frequency, 1);
+Serial.println("Hz");
+lcd.setCursor(7, 1);
+lcd.print("f:");
+lcd.print(frequency);
+} else {
+Serial.println("Error reading frequency"); 
+}
+float pf = pzem.pf();
+if (current != NAN) {
+Serial.print("PF: ");
+Serial.println(pf);
+delay(3000);
+lcd.clear();
+lcd.setCursor(0, 0);
+lcd.print("pf:");
+lcd.print(pf);
+} else {
+Serial.println("Error reading power factor");
+}
+
+delay(1000);
+float voltage1 = pzem1.voltage();
+if (voltage1 != NAN) {
+Serial.print("Voltage1: ");
+Serial.print(voltage1);
+Serial.println("V");
+lcd.setCursor(0, 0);
+lcd.print("V1:");
+lcd.print(voltage1);
+} else {
+Serial.println("Error reading voltage");
+}
+float current1 =  pzem1.current();
+if (current1 != NAN) {
+Serial.print("Current1: ");
+Serial.print(current1);
+Serial.println("A1");
+lcd.setCursor(0, 1);
+lcd.print("I1:");
+lcd.print(current1);
+} else {
+Serial.println("Error reading current");
+}
+float power1 = pzem1.power();
+if (current1 != NAN) {
+Serial.print("Power1: ");
+Serial.print(power1);
+Serial.println("W1");
+lcd.setCursor(7, 0);
+lcd.print("P1:");
+lcd.print(power1);
+} else {
+Serial.println("Error reading power");
+}
+float energy1 = pzem1.energy();
+if (current1 != NAN) {
+Serial.print("Energy1: ");
+Serial.print(energy1, 3);
+Serial.println("kWh1");
+} else {
+Serial.println("Error reading energy");
+}
+float frequency1 = pzem1.frequency();
+if (current != NAN) {
+Serial.print("Frequency1: ");
+Serial.print(frequency1, 1);
+Serial.println("Hz");
+lcd.setCursor(7, 1);
+lcd.print("f1:");
+lcd.print(frequency1);
+} else {
+Serial.println("Error reading frequency"); 
+}
+float pf1 = pzem1.pf();
+if (current != NAN) {
+Serial.print("PF1: ");
+Serial.println(pf1);
+delay(3000);
+lcd.clear();
+lcd.setCursor(0, 0);
+lcd.print("pf1:");
+lcd.print(pf1);
+} else {
+Serial.println("Error reading power factor");
+}
+delay(1000);
+}

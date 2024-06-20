@@ -1,0 +1,176 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WebServer.h>
+
+#define WIFI_SSID "iot"                                            
+#define WIFI_PASSWORD "123456789"
+
+#define host1 "https://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+int potValue = 0;
+int potValue1 = 0;
+
+void setup(void) {
+  Serial.begin(9600);
+  pinMode(19, OUTPUT);
+  pinMode(5,OUTPUT);
+  pinMode(4,OUTPUT);
+  digitalWrite(19, HIGH);
+  WiFi.mode(WIFI_STA);           
+WiFi.begin(WIFI_SSID, WIFI_PASSWORD);                                   
+Serial.print("Connecting to ");
+Serial.print(WIFI_SSID);
+while (WiFi.status() != WL_CONNECTED) {
+  Serial.print(".");
+    delay(500);
+    }
+Serial.println();
+Serial.print("Connected to ");
+Serial.println(WIFI_SSID);
+Serial.print("IP Address is : ");
+Serial.println(WiFi.localIP()); //print local IP address
+digitalWrite(19, HIGH);
+}
+
+void loop(void) 
+{
+ HTTPClient http1;
+http1.begin(host1);
+  http1.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  int httpCode1=http1.GET();
+  String payload=http1.getString(); 
+  String op1,op2,op3,op4;
+  op1 = payload.substring(0, 1);
+  op2 = payload.substring(1, 2);
+  op3 = payload.substring(2, 3);
+  op4 = payload.substring(3, 4);
+  
+  int sensorValue = analogRead(33);
+  float voltage = sensorValue * (5.0 / 1023.0);
+  Serial.println(voltage);
+  delay(100);
+  int tempsensorValue = analogRead(25);
+  float tempvoltage = tempsensorValue * (5000.0 / 1023.0);
+  float temp = tempvoltage / 10.0;
+  Serial.println(temp);
+  delay(100);
+  int pulsesensorValue = analogRead(26);
+  float pulsevoltage = pulsesensorValue * (5.0 / 1023.0);
+  float pulserate = pulsevoltage * 4.5;
+  Serial.println(pulserate);
+  int switchValue = analogRead(27);
+  float switchvoltage = switchValue * (5.0 / 1023.0);
+  Serial.println(switchvoltage);
+
+  if (op1=="1") {
+    a();
+  }
+  else if(op2="1") {
+    b();
+   
+  }else if(op2="1"){
+    c();
+  }else{
+    Serial.println("normal condition");
+  }
+}
+
+  void pwm(){
+  int m=map(potValue,0,4095,0,255);
+  dacWrite(5,m);
+  Serial.println("potValue :");
+  Serial.print(potValue);
+  Serial.println("...........");
+
+}
+  void pwm1(){
+  int m1=map(potValue1,0,4095,0,255);
+  dacWrite(4,m1);
+  Serial.println("potValue :");
+  Serial.print(potValue1);
+  Serial.println("...........");
+  }
+
+  
+void a(){
+  potValue = 0;
+  pwm();
+  potValue1 = 0;
+  pwm1();
+  Serial.println("Tray Servo motor moving 90 degree"); 
+  digitalWrite(19, LOW); 
+  Serial.println("Pick Ball - Suction ON");
+  delay(3000);
+  potValue1 = 1500;
+  pwm1();
+  Serial.println("Suction Servo motor moving down "); 
+  delay(3000);
+ potValue1 = 0;
+ pwm1();
+  Serial.println("Suction Servo motor moving up "); 
+  delay(3000);
+ potValue = 0;
+ pwm();
+  Serial.println("Tray moving to normal position"); 
+  delay(3000);
+  digitalWrite(19, HIGH); 
+  Serial.println("Drop Ball - Suction OFF");
+  delay(3000);
+}
+
+void b(){
+  potValue = 0;
+  pwm();
+  potValue1 = 0;
+  pwm1();
+  Serial.println("Tray Servo motor moving 90 degree"); 
+  potValue = 160;
+  pwm();
+  delay(3000);
+  digitalWrite(19, LOW); 
+  Serial.println("Pick Ball - Suction ON");
+  delay(3000);
+  potValue1 = 1500;
+  pwm1();
+  Serial.println("Suction Servo motor moving down "); 
+  delay(3000);
+ potValue1 = 0;
+ pwm1();
+  Serial.println("Suction Servo motor moving up "); 
+  delay(3000);
+ potValue = 0;
+ pwm();
+  Serial.println("Tray moving to normal position"); 
+  delay(3000);
+  digitalWrite(19, HIGH); 
+  Serial.println("Drop Ball - Suction OFF");
+  delay(3000);
+}
+void c(){
+  potValue = 0;
+  pwm();
+  potValue1 = 0;
+  pwm1();
+  Serial.println("Tray Servo motor moving 90 degree"); 
+  potValue = 1500;
+  pwm();
+  delay(3000);
+  digitalWrite(19, LOW); 
+  Serial.println("Pick Ball - Suction ON");
+  delay(3000);
+  potValue1 = 1500;
+  pwm1();
+  Serial.println("Suction Servo motor moving down "); 
+  delay(3000);
+ potValue1 = 0;
+ pwm1();
+  Serial.println("Suction Servo motor moving up "); 
+  delay(3000);
+ potValue = 0;
+ pwm();
+  Serial.println("Tray moving to normal position"); 
+  delay(3000);
+  digitalWrite(19, HIGH); 
+  Serial.println("Drop Ball - Suction OFF");
+  delay(3000);
+}

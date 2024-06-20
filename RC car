@@ -1,0 +1,63 @@
+#include <SoftwareSerial.h>
+
+
+SoftwareSerial bluetoothSerial(0,1); 
+
+void setup() {
+  Serial.begin(9600);          
+  bluetoothSerial.begin(9600); 
+
+
+
+  pinMode(13, OUTPUT); 
+  pinMode(12, OUTPUT); 
+  pinMode(9, OUTPUT); 
+  Serial.println("Bluetooth RC Car Initialized");
+
+}
+
+void loop() {
+  if (bluetoothSerial.available() > 0) {
+    char command = bluetoothSerial.read();
+    executeCommand(command);
+  }                                         
+
+ 
+}
+
+void executeCommand(char command) {
+  Serial.print("Received C]ommand: ");
+  Serial.println(command);
+
+  switch (command) {
+    case 'F':
+     
+      digitalWrite(13, HIGH);
+      digitalWrite(12, LOW);
+     
+      Serial.println("forward");
+      break;
+    case 'B':
+   
+      digitalWrite(13, LOW);
+      digitalWrite(12, HIGH);
+
+      Serial.println("back");
+      break; 
+    case 'L': 
+  analogWrite(9,1000);
+      break;
+    case 'R': 
+    analogWrite(9,100);
+      break;
+    case 'S':
+    
+      digitalWrite(13, HIGH);
+      digitalWrite(12, HIGH);
+      Serial.println("stop");
+      break;
+    default:
+     
+      break;
+  }
+}

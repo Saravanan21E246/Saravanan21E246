@@ -1,0 +1,183 @@
+#include <PZEM004Tv30.h>
+#include<SoftwareSerial.h>
+#include <Wire.h>
+#include <ESP8266WiFi.h>
+#include <Firebase_ESP_Client.h>
+#include "addons/TokenHelper.h"
+#include "addons/RTDBHelper.h"
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+#define WIFI_SSID "AI"
+#define WIFI_PASSWORD "123456789"
+#define API_KEY "AIzaSyANAWivkdEy8mcB_USTAnX5ZHecvkYP-Xk"
+#define DATABASE_URL "https://energy-monitoring-770d3-default-rtdb.firebaseio.com/"
+
+PZEM004Tv30 pzem(D3, D4);
+PZEM004Tv30 pzem1(D5, D6);
+PZEM004Tv30 pzem2(D7, D8);
+
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+unsigned long sendDataPrevMillis = 0;
+
+bool signupOK = true;
+double current,voltage,power,pf,voltage1,current1,power1,pf1,current2,voltage2,power2,pf2;
+
+void setup() {
+ 
+   Serial.begin(9600);
+   Wire.begin();
+  lcd.init();
+  lcd.backlight(); 
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  Serial.print("Connecting to Wi-Fi");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(300);
+  }
+  Serial.println();
+  Serial.print("Connected with IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.println();
+
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+  if (Firebase.signUp(&config, &auth, "", "")) {
+    Serial.println("ok");
+    signupOK = true;
+  }
+  else {
+    Serial.printf("%s\n", config.signer.signupError.message.c_str());
+  }
+
+  config.token_status_callback = tokenStatusCallback;
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+}
+
+void loop()
+ {
+    if (Firebase.ready() && signupOK && (millis() - sendDataPrevMillis > 1000 || sendDataPrevMillis == 0)) 
+    {
+      sendDataPrevMillis = millis();
+        voltage = pzem.voltage();
+       current = pzem.current();
+        power = pzem.power();
+        pf = pzem.pf();
+       voltage1 = pzem1.voltage();
+       current1 = pzem1.current();
+       power1 = pzem1.power();
+       pf1 = pzem1.pf();
+       voltage2 = pzem2.voltage();
+      current2 = pzem2.current();
+      power2 = pzem2.power();
+      pf2 = pzem2.pf();
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/R phase/voltage",voltage)) {
+        Serial.println("--Successfully saved to: ");
+      }else   {
+          Serial.println("Failed :");
+          Serial.print(fbdo.errorReason());
+        }
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/R phase/current",current)) 
+      {
+        Serial.println("--Successfully saved to: ");
+      }else {
+          Serial.println("Failed :");
+        }
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/R phase/power",power)) 
+      {
+        Serial.println("--Successfully saved to: ");
+      }else {
+          Serial.println("Failed :");
+        }
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/R phase/pf",pf)) 
+      {
+        Serial.println("--Successfully saved to: ");
+      }else  {
+          Serial.println("Failed :");
+        }
+          if (Firebase.RTDB.setDouble(&fbdo, "energy/Y phase/voltage",voltage1)) {
+        Serial.println("--Successfully saved to: ");
+      }else   {
+          Serial.println("Failed :");
+          Serial.print(fbdo.errorReason());
+        }
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/Y phase/current",current1)) 
+      {
+        Serial.println("--Successfully saved to: ");
+      }else {
+          Serial.println("Failed :");
+        }
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/Y phase/power",power1)) 
+      {
+        Serial.println("--Successfully saved to: ");
+      }else {
+          Serial.println("Failed :");
+        }
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/Y phase/pf",pf1)) 
+      {
+        Serial.println("--Successfully saved to: ");
+      }else  {
+          Serial.println("Failed :");
+        }
+          if (Firebase.RTDB.setDouble(&fbdo, "energy/B phase/voltage",voltage2)) {
+        Serial.println("--Successfully saved to: ");
+      }else   {
+          Serial.println("Failed :");
+          Serial.print(fbdo.errorReason());
+        }
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/B phase/current",current2)) 
+      {
+        Serial.println("--Successfully saved to: ");
+      }else {
+          Serial.println("Failed :");
+        }
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/B phase/power",power2)) 
+      {
+        Serial.println("--Successfully saved to: ");
+      }else {
+          Serial.println("Failed :");
+        }
+      if (Firebase.RTDB.setDouble(&fbdo, "energy/B phase/pf",pf2)) 
+      {
+        Serial.println("--Successfully saved to: ");
+      }else  {
+          Serial.println("Failed :");
+        }
+    }
+ lcd.clear();
+    lcd.print("V1=");
+    lcd.print(voltage);
+    lcd.print("A1=");
+    lcd.print(current);
+    lcd.setCursor(0, 1);
+    lcd.print("P1=");
+    lcd.print(power);
+    lcd.print("PF1=");
+     lcd.print(pf);
+     delay(3000);
+    lcd.clear();
+    lcd.print("V2=");
+    lcd.print(voltage1);
+    lcd.print("A2=");
+    lcd.print(current1);
+     lcd.setCursor(0, 1);
+     lcd.print("P2=");
+    lcd.print(power1);
+    lcd.print("PF2=");
+    lcd.print(pf1);
+    delay(3000);
+    lcd.clear();
+   lcd.print("V3=");
+    lcd.print(voltage2);
+    lcd.print("A3=");
+     lcd.print(current2);
+   lcd.setCursor(0, 1);
+   lcd.print("P3=");
+    lcd.print(power2);
+    lcd.print("PF3=");
+    lcd.print(pf2);
+}

@@ -1,0 +1,63 @@
+#include <AT89S52.h>
+#define motorPin1 P2_0
+#define motorPin2 P2_1
+#define button1 P1_0
+#define button2 P1_1
+void naveen(void)
+{
+long int i;
+for(i=0;i<300;i++)
+{
+}
+}
+
+int main()
+{
+  unsigned int speed = 0;
+  unsigned int dutyCycle = 0;
+  unsigned char buf[16];
+
+  TMOD = 0x01;
+  TH0 = 0xFC;
+  TL0 = 0x67;
+  TR0 = 1;
+
+  while (1)
+  {
+    if (P1_0 == 0)
+    {
+      speed++;
+      if (speed > 255)
+      {
+        speed = 200;
+      }
+    }
+
+    if (P1_1 == 0)
+    {
+      speed--;
+      if (speed < 0)
+      {
+        speed = 0;
+      }
+    }
+
+    dutyCycle = (speed * 100) / 200;
+   P2_0= 1;
+   P2_1 = 0;
+    if (dutyCycle > 0)
+    {
+      naveen(dutyCycle);
+    }
+    P2_0 = 0;
+    P2_1 = 0;
+    if (dutyCycle < 100)
+    {
+      naveen(100 - dutyCycle);
+    }
+
+    sprintf(buf, "Speed: %d", speed);
+    lcd_cmd(0x80);
+    lcd_puts(buf);
+  }
+}

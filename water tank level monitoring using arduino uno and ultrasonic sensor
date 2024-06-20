@@ -1,0 +1,44 @@
+#include <Ultrasonic.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+Ultrasonic ultrasonic(12, 13);
+int distance;
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(2,OUTPUT);
+  lcd.init();
+  lcd.backlight(); 
+  lcd.setCursor(0, 0);
+  lcd.print("Water Level");
+  lcd.setCursor(0, 1);
+  lcd.print("Monitoring");
+  delay(2000);
+  lcd.clear();
+digitalWrite(2,LOW);
+}
+
+void loop() {
+ 
+  distance = ultrasonic.read();
+  if(distance>200){
+    lcd.clear();
+    lcd.print("water level=");
+    lcd.print(distance);
+    lcd.setCursor(0, 1);
+    lcd.print("Motor On");
+    digitalWrite(2,HIGH);
+    delay(2000);
+  }else if(distance<10){
+    lcd.clear();
+    lcd.print("water level=");
+    lcd.print(distance);
+    lcd.setCursor(0, 1);
+    lcd.print("Motor OFF");
+    digitalWrite(2,LOW);
+    delay(2000);
+  }
+  Serial.print("Distance in CM: ");
+  Serial.println(distance);
+}

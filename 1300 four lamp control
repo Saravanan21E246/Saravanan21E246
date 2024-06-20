@@ -1,0 +1,132 @@
+#include <WiFi.h>
+#include <WiFiClient.h> 
+#include <WebServer.h>
+#include <HTTPClient.h>
+#define  host1 "https://pgcresearch.pavantech.in/SIH_STREET_LIGHT/pages/Getstatus.php"
+
+int Led_OnBoard = 2;                  
+                  
+const char* ssid = "iot";  // Streetlight                    
+ const char* password = "1234567891055"; // eee123!@#
+    char light1;
+    char light2;
+    char light3;
+    char light4;
+    char light5;
+    char intensity1;
+    char intensity2;
+    char intensity3;
+    char intensity4;
+    char intensity5;
+    int potValue = 0;
+ void setup() {
+ Serial.begin(115200);
+ 
+  delay(1000);
+  pinMode(Led_OnBoard, OUTPUT);       
+   pinMode(25,OUTPUT);
+   pinMode(4,OUTPUT);
+  WiFi.mode(WIFI_OFF);        
+  delay(1000);
+ WiFi.mode(WIFI_STA);        
+  
+  WiFi.begin(ssid, password);     
+  Serial.println("");
+
+  Serial.print("Connecting"); 
+   
+  while (WiFi.status() != WL_CONNECTED) {
+    digitalWrite(Led_OnBoard, LOW);
+    delay(250);
+    Serial.print(".");
+    digitalWrite(Led_OnBoard, HIGH);
+    delay(250);
+  }
+
+  digitalWrite(Led_OnBoard, HIGH);
+ 
+  Serial.println("");
+  Serial.println("Connected to Network/SSID");
+
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP()); 
+}
+
+void loop() {
+       HTTPClient http1;
+       http1.begin(host1);
+       http1.addHeader("Content-Type", "application/x-www-form-urlencoded");
+       int httpCode1=http1.GET();
+       String payload=http1.getString(); 
+       Serial.println(payload);
+      processPayload(payload);
+        if(light4 == '1'){
+          digitalWrite(4,0);
+          Serial.print("on");
+        }
+        if(light4 == '0'){
+          digitalWrite(4,1);
+          Serial.print("off");
+        }
+        if(intensity2 == '0')
+          {
+            potValue=0 ;
+            pwm();
+            Serial.println("potValue: "+potValue);
+            
+          }
+        else if(intensity2 =='1' )
+          {
+           potValue= 120;
+           pwm();
+            Serial.println("potValue: "+potValue);
+            
+          }
+        else if(intensity2 =='2' )
+          {
+            
+            potValue= 160 ;
+            pwm();
+            Serial.println("potValue: "+potValue);
+
+          }
+        else if(intensity2 =='3')
+          {
+          
+            potValue=250 ;
+            pwm();
+            Serial.println("potValue: "+potValue);
+          }
+        else if(intensity2 =='4' )
+          {
+           
+            potValue=1500;
+            pwm();   
+            Serial.println("potValue: "+potValue);
+            
+          }        
+    
+  }
+
+  void pwm(){
+  int m=map(potValue,0,4095,0,255);
+  dacWrite(25,m);
+  Serial.println("potValue :");
+  Serial.print(potValue);
+  Serial.println("...........");
+
+}
+void processPayload(String data) {
+  if (data.length() == 10) {
+   light1 = data[0];
+   light2 = data[1];
+   light3 = data[2];
+   light4 = data[3];
+    light5 = data[4];
+    intensity1 = data[5];
+    intensity2 = data[6];
+    intensity3 = data[7];
+    intensity4 = data[8];
+     intensity5 = data[9];
+  }
+  }

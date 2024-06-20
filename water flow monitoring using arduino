@@ -1,0 +1,104 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+#include <Arduino.h>
+
+
+const int flowSensorPin1 = 2; // Digital pin for flow sensor 1
+const int flowSensorPin2 = 3; // Digital pin for flow sensor 2
+const int flowSensorPin3 = 4; // Digital pin for flow sensor 3
+const int flowSensorPin4 = 5; // Digital pin for flow sensor 4
+
+
+volatile unsigned int pulseCount1 = 0;
+volatile unsigned int pulseCount2 = 0;
+volatile unsigned int pulseCount3 = 0;
+volatile unsigned int pulseCount4 = 0;
+
+float flowRate1 = 0.0;
+float flowRate2 = 0.0;
+float flowRate3 = 0.0;
+float flowRate4 = 0.0;
+
+
+unsigned long startTime;
+unsigned long elapsedTime;
+
+
+const float calibrationFactor = 4.5; // Adjust this based on your sensor's calibration
+
+void setup() {
+  
+  Wire.begin();
+  lcd.init();
+  lcd.backlight(); 
+ 
+  attachInterrupt(digitalPinToInterrupt(flowSensorPin1), pulseCounter1, FALLING);
+  attachInterrupt(digitalPinToInterrupt(flowSensorPin2), pulseCounter2, FALLING);
+  attachInterrupt(digitalPinToInterrupt(flowSensorPin3), pulseCounter3, FALLING);
+  attachInterrupt(digitalPinToInterrupt(flowSensorPin4), pulseCounter4, FALLING);
+
+ 
+  startTime = millis();
+}
+
+void loop() {
+  
+  elapsedTime = millis() - startTime;
+  if (elapsedTime >= 1000) {
+   
+    flowRate1 = pulseCount1 / (elapsedTime / 60000.0) / calibrationFactor;
+    flowRate2 = pulseCount2 / (elapsedTime / 60000.0) / calibrationFactor;
+    flowRate3 = pulseCount3 / (elapsedTime / 60000.0) / calibrationFactor;
+    flowRate4 = pulseCount4 / (elapsedTime / 60000.0) / calibrationFactor;
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Flow Rate 1: ");
+    lcd.setCursor(0, 1);
+    lcd.print(flowRate1);
+    lcd.print(" L/min\t");
+     delay(1000);
+     lcd.setCursor(0, 0);
+    lcd.print("Flow Rate 2: ");
+    lcd.setCursor(0, 1);
+    lcd.print(flowRate2);
+    lcd.print(" L/min\t");
+     delay(1000);
+    lcd.setCursor(0, 0);
+    lcd.print("Flow Rate 3: ");
+    lcd.setCursor(0, 1);
+    lcd.print(flowRate3);
+    lcd.print(" L/min\t");
+    delay(1000);
+     lcd.setCursor(0, 0);
+    lcd.print("Flow Rate 4: ");
+    lcd.setCursor(0, 1);
+    lcd.print(flowRate4);
+    lcd.println(" L/min");
+    delay(1000);
+ 
+    pulseCount1 = 0;
+    pulseCount2 = 0;
+    pulseCount3 = 0;
+    pulseCount4 = 0;
+    startTime = millis();
+  }
+}
+
+
+void pulseCounter1() {
+  pulseCount1++;
+}
+
+void pulseCounter2() {
+  pulseCount2++;
+}
+
+void pulseCounter3() {
+  pulseCount3++;
+}
+
+void pulseCounter4() {
+  pulseCount4++;
+}

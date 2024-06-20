@@ -1,0 +1,169 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h> 
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+#include <PZEM004Tv30.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 20, 4);
+
+PZEM004Tv30 pzem(D7, D8);
+PZEM004Tv30 pzem1(D3, D4);
+PZEM004Tv30 pzem2(D5, D6);
+
+
+#define WIFI_SSID "hello"
+#define WIFI_PASSWORD "123456789"
+
+
+void setup() {
+ Serial.begin(9600);
+  Wire.begin();
+  lcd.init();
+  lcd.backlight(); 
+ WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+ Serial.print("Connecting to Wi-Fi");
+  while (WiFi.status() != WL_CONNECTED){
+    Serial.print(".");
+   
+    delay(300);
+  }
+  Serial.println();
+  Serial.print("Connected with IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.println();
+
+}
+void loop() {
+  if(WiFi.status()== WL_CONNECTED){
+        
+      WiFiClient client;
+      HTTPClient http;   
+    float R_PhaseVoltage = pzem.voltage();
+    float R_PhaseCurrent = pzem.current();
+    float R_Power = pzem.power();
+    float R_Energy = pzem.energy();
+    float Frequency = pzem.frequency(); 
+    float R_PowerFactor= pzem.pf(); 
+
+    float Y_PhaseVoltage = pzem1.voltage();
+    float Y_PhaseCurrent = pzem1.current();
+    float Y_Power = pzem1.power();
+    float Y_Energy= pzem1.energy();
+    float Y_PowerFactor = pzem1.pf();
+
+    float B_PhaseVoltage = pzem2.voltage();
+    float B_PhaseCurrent = pzem2.current();
+    float B_Power = pzem2.power();
+    float B_Energy = pzem2.energy(); 
+    float B_PowerFactor = pzem2.pf();
+
+    
+String VoltagePost1,VoltagePost2,VoltagePost3,CurrentPost1,CurrentPost2,CurrentPost3,
+       PowerPost1,PowerFactorPost1,PowerPost2,PowerPost3,PowerFactorPost2,PowerFactorPost3,
+       FrequencyPost1,EnergyPost1,EnergyPost2,EnergyPost3,postData;
+
+    double  Voltage1 =R_PhaseVoltage;
+    double  Current1 =R_PhaseCurrent;
+    double  Power1 =R_Power;
+    double  Frequency1 =Frequency;
+    double  PowerFactor1 =R_PowerFactor;
+    double  Energy1 =R_Energy;
+
+    double  Voltage2 =Y_PhaseVoltage;
+    double  Current2 =Y_PhaseCurrent;
+    double  Power2 =Y_Power;
+    double  PowerFactor2 =Y_PowerFactor;
+    double  Energy2 =Y_Energy;
+
+    double  Voltage3 =B_PhaseVoltage;
+    double  Current3 =B_PhaseCurrent;
+    double  Power3 =B_Power;
+    double  PowerFactor3 =B_PowerFactor;
+    double  Energy3 =B_Energy;
+    
+    lcd.setCursor(0, 0);
+    lcd.print("R_Voltage=");
+    lcd.print(R_PhaseVoltage);
+        lcd.setCursor(0, 1);
+    lcd.print("R_Current=");
+    lcd.print(R_PhaseCurrent);
+        lcd.setCursor(0, 2);
+    lcd.print("R_Power=");
+    lcd.print(R_Power);
+        lcd.setCursor(0, 3);
+    lcd.print("R_PowerFactor=");
+    lcd.print(R_PowerFactor);
+
+delay(2000);
+
+  VoltagePost1 = String(Voltage1);  
+  VoltagePost2 = String(Voltage2);   
+  VoltagePost3 = String(Voltage3);
+  CurrentPost1 = String(Current1);
+  CurrentPost2 = String(Current2);
+  CurrentPost3 = String(Current3);
+
+  PowerPost1 = String(Power1);  
+  PowerFactorPost1 = String(PowerFactor1);   
+  PowerPost2 = String(Power2);
+  PowerPost3 = String(Power3);
+  PowerFactorPost2 = String(PowerFactor2);
+  PowerFactorPost3 = String(PowerFactor3);
+
+  FrequencyPost1 = String(Frequency1);  
+  EnergyPost1= String(Energy1);   
+  EnergyPost2 = String(Energy2);
+  EnergyPost3 = String(Energy3);
+  
+  
+  postData ="R_PhaseVoltage=" + VoltagePost1 + "&Y_PhaseVoltage=" + VoltagePost2 +"&B_PhaseVoltage=" + VoltagePost3 +"&R_PhaseCurrent=" + CurrentPost1 +"&Y_PhaseCurrent=" + CurrentPost2 +"&B_PhaseCurrent=" + CurrentPost3 +"R_Power=" + PowerPost1 + "&R_PowerFactor=" +PowerFactorPost1 +"&Y_Power=" + PowerPost2 +"&B_Power=" + PowerPost3 +"&Y_PowerFactor=" + PowerFactorPost2 +"&B_PowerFactor=" + PowerFactorPost3 +"&Frequency=" + FrequencyPost1 + "&R_Energy=" +  EnergyPost1 +"&Y_Energy=" +  EnergyPost2 +"&B_Energy=" +  EnergyPost3;
+            
+ 
+ http.begin(client,"http://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+   
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");    //Specify content-type header
+ 
+  int httpCode = http.POST(postData);  
+  String payload = http.getString();  
+
+ 
+  Serial.println(httpCode);   
+  Serial.println(payload);    
+  //Serial.println("Lamp_ID=" + Lamp_IDPost + "Status=" + StatusPost + "latitude=" + latitudePost +"longitude=" + longitudePost + "info=" + infoPost+"icon=" + iconPost);
+  Serial.println("R_PhaseVoltage=" + VoltagePost1 + "&Y_PhaseVoltage=" + VoltagePost2 +"&B_PhaseVoltage=" + VoltagePost3 +"&R_PhaseCurrent=" + CurrentPost1 +"&Y_PhaseCurrent=" + CurrentPost2 +"&B_PhaseCurrent=" + CurrentPost3 +"R_Power=" + PowerPost1 + "&R_PowerFactor=" +PowerFactorPost1 +"&Y_Power=" + PowerPost2 +"&B_Power=" + PowerPost3 +"&Y_PowerFactor=" + PowerFactorPost2 +"&B_PowerFactor=" + PowerFactorPost3 +"&Frequency=" + FrequencyPost1 + "&R_Energy=" +  EnergyPost1 +"&Y_Energy=" +  EnergyPost2 +"&B_Energy=" +  EnergyPost3);
+
+  http.end(); 
+
+    
+lcd.clear();
+     lcd.setCursor(0, 0);
+    lcd.print("Y_Voltage=");
+    lcd.print(Y_PhaseVoltage);
+        lcd.setCursor(0, 1);
+    lcd.print("Y_Current=");
+    lcd.print(Y_PhaseCurrent);
+        lcd.setCursor(0, 2);
+    lcd.print("Y_Power=");
+    lcd.print(Y_Power);
+        lcd.setCursor(0, 3);
+    lcd.print("Y_PowerFactor=");
+    lcd.print(Y_PowerFactor);
+    delay(2000);
+           lcd.clear();
+     lcd.setCursor(0, 0);
+    lcd.print("B_Voltage=");
+    lcd.print(B_PhaseVoltage);
+        lcd.setCursor(0, 1);
+    lcd.print("B_Current=");
+    lcd.print(B_PhaseCurrent);
+        lcd.setCursor(0, 2);
+    lcd.print("B_Power=");
+    lcd.print(B_Power);
+        lcd.setCursor(0, 3);
+    lcd.print("B_PowerFactor=");
+    lcd.print(B_PowerFactor);
+    delay(2000);
+          }
+   
+}

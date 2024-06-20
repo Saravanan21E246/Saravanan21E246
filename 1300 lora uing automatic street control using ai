@@ -1,0 +1,852 @@
+#include <SPI.h>
+#include <LoRa.h>
+#include <Wire.h>  
+#include "uRTCLib.h"
+  #include <BH1750.h>
+
+uRTCLib rtc(0x68);
+BH1750 bh1750_a;
+BH1750 bh1750_b;
+
+char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+
+#include <PZEM004Tv30.h>  //power
+#if defined(ESP32)
+PZEM004Tv30 pzem(Serial2,16,17);
+#else
+PZEM004Tv30 pzem(Serial2);
+#endif
+    float voltage;
+    float current; 
+    float power; 
+    float energy; 
+    float frequency; 
+    float pf;
+    float light_level_a;
+    float light_level_b;
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WebServer.h>
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
+#define WIFI_SSID "iot"            // WIFI SSID here                                   
+#define WIFI_PASSWORD "1234567891055"
+#define  host1 "https://pgcresearch.pavantech.in/SIH_STREET_LIGHT/pages/Getstatus.php" // ON_OFF
+
+const char* serverUrl = "http://pgcresearch.pavantech.in/SIH_STREET_LIGHT/uploadDB.php"; // Add "http://" protocol
+
+const char *url = "https://pgcresearch.pavantech.in/SIH_STREET_LIGHT/pages/GetMode.php";
+
+const char *AutoUpdate = "https://pgcresearch.pavantech.in/SIH_STREET_LIGHT/pages/AutomaticUpdate.php";
+#define BOTtoken "6105850338:AAGYG6hKQ31WktpYtKza86mxCSFeXZc4iY8"
+#define CHAT_ID "-1001920945805"
+
+#define SCK     5    // GPIO5  -- SX1278's SCK
+#define MISO    19   // GPIO19 -- SX1278's MISnO
+#define MOSI    27   // GPIO27 -- SX1278's MOSI
+#define SS      18   // GPIO18 -- SX1278's CS
+#define RST     14   // GPIO14 -- SX1278's RESET
+#define DI0     26   // GPIO26 -- SX1278's IRQ(Interrupt Request)
+#define BAND  433E6
+
+unsigned int counter = 0;
+String MASTER_Incoming = "";
+String SLAVE_Incoming = "";
+String Incoming = "";
+String Message2 = "";    
+String Message1 = "";
+
+byte LocalAddress = 0x01;               //--> address of this device (Master Address).
+byte Destination_ESP32_Slave_1 = 0x11;  //--> destination to send to Slave 1 (ESP32).
+byte Destination_ESP32_Slave_2 = 0x21;  //--> destination to send to Slave 2 (ESP32).
+
+unsigned long previousMillis_SendMSG = 0;
+const long interval_SendMSG = 3000;
+
+byte Slv = 0;
+
+
+const int xPin = 36; // Analog pin for X-axis
+const int yPin = 37; // Analog pin for Y-axis
+const int zPin = 38; // Analog pin for Z-axis
+ 
+
+
+  const int potPin = 25;// Potentiometer is connected to GPIO 25 (Analog ADC1_CH6)
+
+int potValue = 0;
+WiFiClientSecure client;
+UniversalTelegramBot bot(BOTtoken, client);
+
+void setup() {
+
+  Serial.begin(9600);
+ //                                                                       pinMode(pirPin, INPUT); // Set PIR pin as input
+  pinMode(25,OUTPUT);
+  pinMode(4,OUTPUT);
+ 
+  Wire.begin();
+ 
+  Wire.begin();
+  delay(2000);
+  URTCLIB_WIRE.begin();
+  bh1750_a.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x23, &Wire);
+  bh1750_b.begin(BH1750::CONTINUOUS_HIGH_RES_MODE, 0x5C, &Wire);
+  rtc.set(0, 3, 11, 5, 15, 12, 23);//s-m-h-d-date-m-y
+
+  //.......................................
+Serial.begin(115200); 
+Serial.println("Communication Started \n\n");  
+delay(1000);
+WiFi.mode(WIFI_STA);           
+WiFi.begin(WIFI_SSID, WIFI_PASSWORD);                                     //try to connect with wifi
+Serial.print("Connecting to ");
+Serial.print(WIFI_SSID);
+while (WiFi.status() != WL_CONNECTED) 
+{ Serial.print(".");
+    delay(500); }
+
+Serial.println();
+Serial.print("Connected to ");
+Serial.println(WIFI_SSID);
+Serial.print("IP Address is : ");
+Serial.println(WiFi.localIP());    //print local IP address
+
+delay(30);
+
+ 
+  
+  while (!Serial);
+  Serial.println();
+  Serial.println("LoRa Sender Test");
+  
+  SPI.begin(SCK,MISO,MOSI,SS);
+  LoRa.setPins(SS,RST,DI0);
+  if (!LoRa.begin(433E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+  Serial.println("init ok");
+
+  delay(1500);
+
+}
+
+String StreetLight_Node_1, StreetLight_Node_2, StreetLight_Node_3, StreetLight_Node_4,StreetLight_Node_5;
+String Lamp1_intensity, Lamp2_intensity, Lamp3_intensity, Lamp4_intensity,Lamp5_intensity;
+ String inteligent;
+float roll;
+
+
+void loop() {
+ 
+      if(WiFi.status()== WL_CONNECTED)
+      {
+           
+      HTTPClient http2;
+      http2.begin(url); 
+      int httpCode = http2.GET();
+    if (httpCode > 0) {
+      if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+        String payloadMode = http2.getString();
+        
+        Serial.println(payloadMode); 
+
+        String manual = payloadMode.substring(0, 1);
+        String automatic = payloadMode.substring(1, 2);
+         inteligent = payloadMode.substring(2, 3);
+
+      // controls
+       HTTPClient http1;
+       http1.begin(host1);
+       http1.addHeader("Content-Type", "application/x-www-form-urlencoded");
+       int httpCode1=http1.GET();
+       String payload=http1.getString(); // get data from webhost continously
+       Serial.println(payload);
+       StreetLight_Node_1 = payload.substring(0, 1);
+       StreetLight_Node_2 = payload.substring(1, 2);
+       StreetLight_Node_3 = payload.substring(2, 3);
+       StreetLight_Node_4 = payload.substring(3, 4);
+       StreetLight_Node_5 = payload.substring(4, 5);
+       Lamp1_intensity = payload.substring(5, 6); 
+       Lamp2_intensity = payload.substring(6, 7); 
+       Lamp3_intensity = payload.substring(7, 8); 
+       Lamp4_intensity = payload.substring(8, 9); 
+       Lamp5_intensity = payload.substring(9, 10); 
+
+       Serial.println(Lamp1_intensity+","+Lamp2_intensity+","+Lamp3_intensity+","+Lamp4_intensity+","+Lamp5_intensity);
+        watt();// for power mesurement
+
+       // manual mode 
+  if(manual=="1" && automatic=="0" && inteligent =="0" ){
+    Serial.println("Manual mode successfully");
+           if(StreetLight_Node_3 == "1")
+          {
+            digitalWrite(4,LOW);
+            Serial.println("ON");
+          }
+       else
+          {
+            digitalWrite(4,HIGH);
+            Serial.println("OFF");
+          }
+
+        float luxLam1=light_level_a;
+        float luxLam2=light_level_a;
+        float luxLam3=light_level_a;
+        float luxLam4=light_level_a;
+        float luxLam5=light_level_a;
+              
+        Serial.println(light_level_a); 
+      
+        float luxEnv1=light_level_b;
+        float voltage7[5] = {voltage, 0, 0, 0, 0};
+        float current7[5] = {current, 0, 0, 0, 0};
+        float power7[5] = {power, 0, 0, 0, 0};
+        float pf7[5] = {pf, pf, pf, pf, pf};
+        float energy7[5] = {energy, 0, 0, 0, 0};
+        float luxEnv =luxEnv1;
+        float luxLam[5] ={luxLam1,0,0,0,0};
+
+
+        if(Lamp3_intensity == "0")
+          {
+            potValue=0 ;
+            pwm();
+            digitalWrite(4,HIGH);
+            power7[0]=0;               
+            current7[0]=0;
+            power7[0]=0;
+            Serial.println("potValue: "+potValue);
+            
+          }
+        else if(Lamp3_intensity =="1" )
+          {
+           // digitalWrite(4,LOW);
+           potValue= 120;
+           pwm();
+            power7[0]=6;
+            Serial.println("potValue: "+potValue);
+            
+          }
+        else if(Lamp3_intensity =="2" )
+          {
+            //digitalWrite(4,LOW);
+            potValue= 160 ;
+            pwm();
+            power7[0]=12;
+            Serial.println("potValue: "+potValue);
+
+          }
+        else if(Lamp3_intensity =="3" )
+          {
+            //digitalWrite(4,LOW);
+            potValue=250 ;
+            pwm();
+            power7[0]=18; 
+            Serial.println("potValue: "+potValue);
+          }
+        else if(Lamp3_intensity =="4" )
+          {
+            //digitalWrite(4,LOW);
+            potValue=1500;
+            pwm(); 
+            power7[0]=24;  
+            Serial.println("potValue: "+potValue);
+            
+          }        
+    
+        Serial.println(" ");
+        lum();// for lux and rtc
+        Serial.println(" ");
+        gyro();// for gyro 
+        Serial.println(" ");
+       
+
+        Message1 = payload;
+
+
+      HTTPClient http;
+    // Construct the POST request
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    // Prepare the data to send
+    String data = "voltage1=" + String(voltage7[0]) + "&current1=" + String(current7[0]) + "&power1=" + String(power7[0]) + "&energy1=" + String(energy7[0]) +
+                  "&luxEnvironment=" + String(luxEnv) +
+                  "&luxLamp1=" + String(luxLam[0]) +
+                  "&pole1="+ float(roll)+
+                  "&latitude1="+"28.455209"+
+                  "&longitude1="+"77.285549"+
+                  "&lampinfo1="+"24W"+
+                  "&lampname1="+"NODE-1"+
+                  "&lampicon1="+"onlamp.png"+
+                  "&lampstatus1="+String(StreetLight_Node_1);
+    
+    int httpResponseCode;// = http.POST(data);
+    Serial.println(data);   
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println(httpResponseCode);
+      Serial.println(response);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+      }
+    } 
+
+if (manual == "0" && automatic == "1" && inteligent =="0") {
+    Serial.println("automatic mode successfully"); 
+    digitalWrite(4,LOW);
+    /*  if(StreetLight_Node_1 == "1")
+          {
+            digitalWrite(4,LOW);
+            Serial.println("ON");
+          }
+       else
+          {
+            digitalWrite(4,HIGH);
+            Serial.println("OFF");
+          }  */
+
+        float luxLam1=light_level_a;
+        float luxLam2=light_level_a;
+        float luxLam3=light_level_a;
+        float luxLam4=light_level_a;
+        float luxLam5=light_level_a;
+              
+        Serial.println(light_level_a); 
+
+        float luxEnv1=light_level_b;
+        float voltage7[5] = {voltage, 0, 0, 0, 0};
+        float current7[5] = {current, 0, 0, 0, 0};
+        float power7[5] = {power, 0, 0, 0, 0};
+        float pf7[5] = {pf, pf, pf, pf, pf};
+        float energy7[5] = {energy, 0, 0, 0, 0};
+        float luxEnv =luxEnv1;
+        float luxLam[5] ={luxLam1,0,0,0,0};
+
+      HTTPClient http;
+    // Construct the POST request
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    // Prepare the data to send
+    HTTPClient http2;
+
+    if (light_level_b >= 0 && light_level_b <= 10) {
+
+        
+
+        potValue = 1500;
+        // Prepare POST data
+        String postData11 = "switch1=1&switch2=0&switch3=0&switch4=0&switch5=0&intensity1=4&intensity2=0&intensity3=0&intensity4=0&intensity5=0";
+        // Make the POST request
+        http2.begin(AutoUpdate);
+        http2.addHeader("Content-Type", "application/x-www-form-urlencoded");
+        int httpResponseCode;// = http2.POST(postData11);
+        // Check for successful update
+        if (httpResponseCode == 200) {
+            Serial.println("Update successful");
+            Serial.println("potValue: "+potValue);
+        } else {
+            Serial.print("Error during update. HTTP response code: ");
+            Serial.println(httpResponseCode);
+        }
+        current7[0]=0.104;
+        power7[0]=24;
+        String data = "voltage1=" + String(voltage7[0]) + "&current1=" + String(current7[0]) + "&power1=" + String(power7[0]) + "&energy1=" + String(energy7[0]) +
+                  "&luxEnvironment=" + String(luxEnv) +
+                  "&luxLamp1=" + String(luxLam[0]) +
+                  "&pole1="+ float(roll)+
+                  "&latitude1="+"28.455209"+
+                  "&longitude1="+"77.285549"+
+                  "&lampinfo1="+"24W"+
+                  "&lampname1="+"NODE-1"+
+                  "&lampicon1="+"onlamp.png"+
+                  "&lampstatus1="+String(StreetLight_Node_1);
+    // Send the POST request
+    int httpResponseCode1;// = http.POST(data);
+    Serial.println(data);   
+    if (httpResponseCode1 > 0) {
+      String response = http.getString();
+      Serial.println(httpResponseCode1);
+      Serial.println(response);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode1);
+      }
+
+
+        pwm();
+    }
+
+    if (light_level_b >= 11 && light_level_b <= 50) {
+
+       
+
+        potValue = 250;
+        // Prepare POST data
+        String postData12 = "switch1=1&switch2=0&switch3=0&switch4=0&switch5=0&intensity1=3&intensity2=0&intensity3=0&intensity4=0&intensity5=0";
+        // Make the POST request
+        http2.begin(AutoUpdate);
+        http2.addHeader("Content-Type", "application/x-www-form-urlencoded");
+        int httpResponseCode = http2.POST(postData12);
+        // Check for successful update
+        if (httpResponseCode == 200) {
+            Serial.println("Update successful");
+            Serial.println("potValue:" + potValue);
+        } else {
+            Serial.print("Error during update. HTTP response code: ");
+            Serial.println(httpResponseCode);
+        }
+         current7[0]=0.07;
+        power7[0]=18;
+         String data = "voltage1=" + String(voltage7[0]) + "&current1=" + String(current7[0]) + "&power1=" + String(power7[0]) + "&energy1=" + String(energy7[0]) +
+                  "&luxEnvironment=" + String(luxEnv) +
+                  "&luxLamp1=" + String(luxLam[0]) +
+                  "&pole1="+ float(roll)+
+                  "&latitude1="+"28.455209"+
+                  "&longitude1="+"77.285549"+
+                  "&lampinfo1="+"24W"+
+                  "&lampname1="+"NODE-1"+
+                  "&lampicon1="+"onlamp.png"+
+                  "&lampstatus1="+String(StreetLight_Node_1);    // Send the POST request
+    int httpResponseCode2 = http.POST(data);
+    Serial.println(data);   
+    if (httpResponseCode2 > 0) {
+      String response = http.getString();
+      Serial.println(httpResponseCode2);
+      Serial.println(response);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode2);
+      }
+        pwm();
+    }
+
+    if (light_level_b >= 51 && light_level_b <= 150) {
+
+        
+        potValue = 160;
+        // Prepare POST data
+        String postData13 = "switch1=1&switch2=0&switch3=0&switch4=0&switch5=0&intensity1=2&intensity2=0&intensity3=0&intensity4=0&intensity5=0";
+        // Make the POST request
+        http2.begin(AutoUpdate);
+        http2.addHeader("Content-Type", "application/x-www-form-urlencoded");
+        int httpResponseCode = http2.POST(postData13);
+        // Check for successful update
+        if (httpResponseCode == 200) {
+            Serial.println("Update successful");
+            Serial.println("potValue: " +potValue);
+        } else {
+            Serial.print("Error during update. HTTP response code: ");
+            Serial.println(httpResponseCode);
+        }
+         current7[0]=0.05;
+        power7[0]=12;
+         String data = "voltage1=" + String(voltage7[0]) + "&current1=" + String(current7[0]) + "&power1=" + String(power7[0]) + "&energy1=" + String(energy7[0]) +
+                  "&luxEnvironment=" + String(luxEnv) +
+                  "&luxLamp1=" + String(luxLam[0]) +
+                  "&pole1="+ float(roll)+
+                  "&latitude1="+"28.455209"+
+                  "&longitude1="+"77.285549"+
+                  "&lampinfo1="+"24W"+
+                  "&lampname1="+"NODE-1"+
+                  "&lampicon1="+"onlamp.png"+
+                  "&lampstatus1="+String(StreetLight_Node_1);
+    // Send the POST request
+    int httpResponseCode4 = http.POST(data);
+    Serial.println(data);   
+    if (httpResponseCode4 > 0) {
+      String response = http.getString();
+      Serial.println(httpResponseCode4);
+      Serial.println(response);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode4);
+      }
+        pwm();
+    }
+
+    if (light_level_b >= 151 && light_level_b <= 190) {
+
+        potValue = 120;
+        // Prepare POST data
+        String postData14 = "switch1=1&switch2=0&switch3=0&switch4=0&switch5=0&intensity1=1&intensity2=0&intensity3=0&intensity4=0&intensity5=0";
+        // Make the POST request
+        http2.begin(AutoUpdate);
+        http2.addHeader("Content-Type", "application/x-www-form-urlencoded");
+        int httpResponseCode = http2.POST(postData14);
+        // Check for successful update
+        if (httpResponseCode == 200) {
+            Serial.println("Update successful");
+            Serial.println("potValue: " +potValue);
+        } else {
+            Serial.print("Error during update. HTTP response code: ");
+            Serial.println(httpResponseCode);
+        }
+         current7[0]=0.02;
+        power7[0]=6;
+        String data = "voltage1=" + String(voltage7[0]) + "&current1=" + String(current7[0]) + "&power1=" + String(power7[0]) + "&energy1=" + String(energy7[0]) +
+                  "&luxEnvironment=" + String(luxEnv) +
+                  "&luxLamp1=" + String(luxLam[0]) +
+                  "&pole1="+ float(roll)+
+                  "&latitude1="+"28.455209"+
+                  "&longitude1="+"77.285549"+
+                  "&lampinfo1="+"24W"+
+                  "&lampname1="+"NODE-1"+
+                  "&lampicon1="+"onlamp.png"+
+                  "&lampstatus1="+String(StreetLight_Node_1);    
+    // Send the POST request
+    int httpResponseCode5 = http.POST(data);
+    Serial.println(data);   
+    if (httpResponseCode5 > 0) {
+      String response = http.getString();
+      Serial.println(httpResponseCode5);
+      Serial.println(response);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode5);
+      }
+        pwm();
+    }
+
+    if (light_level_b >= 190) {
+       
+    digitalWrite(4,HIGH);
+
+        potValue = 0;
+        // Prepare POST data
+        String postData1 = "switch1=0&switch2=0&switch3=0&switch4=0&switch5=0&intensity1=0&intensity2=0&intensity3=0&intensity4=0&intensity5=0";
+        // Make the POST request
+        http2.begin(AutoUpdate);
+        http2.addHeader("Content-Type", "application/x-www-form-urlencoded");
+        int httpResponseCode = http2.POST(postData1);
+        // Check for successful update
+        if (httpResponseCode == 200) {
+            Serial.println("Update successful");
+            Serial.println("potValue:" +potValue);
+        } else {
+            Serial.print("Error during update. HTTP response code: ");
+            Serial.println(httpResponseCode);
+        }
+         current7[0]=0;
+        power7[0]=0;
+        String data = "voltage1=" + String(voltage7[0]) + "&current1=" + String(current7[0]) + "&power1=" + String(power7[0]) + "&energy1=" + String(energy7[0]) +
+                  "&luxEnvironment=" + String(luxEnv) +
+                  "&luxLamp1=" + String(luxLam[0]) +
+                  "&pole1="+ float(roll)+
+                  "&latitude1="+"28.455209"+
+                  "&longitude1="+"77.285549"+
+                  "&lampinfo1="+"24W"+
+                  "&lampname1="+"NODE-1"+
+                  "&lampicon1="+"onlamp.png"+
+                  "&lampstatus1="+String(StreetLight_Node_1);    // Send the POST request
+     int httpResponseCode6 = http.POST(data);
+    Serial.println(data);   
+    if (httpResponseCode6 > 0) {
+      String response = http.getString();
+      Serial.println(httpResponseCode6);
+      Serial.println(response);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode6);
+      }
+        pwm();
+      }
+
+
+}
+      /// intelligeny mode
+      if ( manual=="0" && automatic=="0" && inteligent =="1") {
+
+
+        float luxLam1=light_level_a;
+        float luxLam2=light_level_a;
+        float luxLam3=light_level_a;
+        float luxLam4=light_level_a;
+        float luxLam5=light_level_a;
+
+        float luxEnv1=light_level_b;
+        float voltage7[5] = {voltage, 0, 0, 0, 0};
+        float current7[5] = {current, 0, 0, 0, 0};
+        float power7[5] = {power, 0, 0, 0, 0};
+        float pf7[5] = {pf, pf, pf, pf, pf};
+        float energy7[5] = {energy, 0, 0, 0, 0};
+        float luxEnv =luxEnv1;
+        float luxLam[5] ={luxLam1,0,0,0,0};
+
+    
+      //  if (light_level_b >= 0 && light_level_b <= 30){
+         // digitalWrite(4,LOW);
+
+        if(Lamp1_intensity == "2" )
+          {
+            digitalWrite(4,LOW);
+             
+           potValue= 160 ;
+            pwm();
+            power7[0]=12;
+            Serial.println("potValue: "+potValue);
+                HTTPClient http;
+    // Construct the POST request
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    // Prepare the data to send
+    String data = "voltage1=" + String(voltage7[0]) + "&current1=" + String(current7[0]) + "&power1=" + String(power7[0]) + "&energy1=" + String(energy7[0]) +
+                  "&luxEnvironment=" + String(luxEnv) +
+                  "&luxLamp1=" + String(luxLam[0]) +
+                  "&pole1="+ float(roll)+
+                  "&latitude1="+"28.455209"+
+                  "&longitude1="+"77.285549"+
+                  "&lampinfo1="+"24W"+
+                  "&lampname1="+"NODE-1"+
+                  "&lampicon1="+"onlamp.png"+
+                  "&lampstatus1="+String(StreetLight_Node_1);
+    
+    int httpResponseCode = http.POST(data);
+    Serial.println(data);   
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println(httpResponseCode);
+      Serial.println(response);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+      }
+   
+          }
+          if(Lamp1_intensity =="4" )
+          {
+  digitalWrite(4,LOW);
+          potValue=1500;
+            pwm(); 
+            power7[0]=24;  
+            Serial.println("potValue: "+potValue);
+                HTTPClient http;
+    // Construct the POST request
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    // Prepare the data to send
+    String data = "voltage1=" + String(voltage7[0]) + "&current1=" + String(current7[0]) + "&power1=" + String(power7[0]) + "&energy1=" + String(energy7[0]) +
+                  "&luxEnvironment=" + String(luxEnv) +
+                  "&luxLamp1=" + String(luxLam[0]) +
+                  "&pole1="+ float(roll)+
+                  "&latitude1="+"28.455209"+
+                  "&longitude1="+"77.285549"+
+                  "&lampinfo1="+"24W"+
+                  "&lampname1="+"NODE-1"+
+                  "&lampicon1="+"onlamp.png"+
+                  "&lampstatus1="+String(StreetLight_Node_1);
+    
+    int httpResponseCode = http.POST(data);
+    Serial.println(data);   
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println(httpResponseCode);
+      Serial.println(response);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+      }
+
+      
+          } 
+       
+        watt();// for power mesurement
+        Serial.println(" ");
+        lum();// for lux and rtc
+        Serial.println(" ");
+        gyro();// for gyro 
+        Serial.println(" ");
+      }
+      //else{
+         //digitalWrite(4,1);
+      //}
+       
+    }
+    }
+  }
+
+
+
+
+   
+
+
+
+
+ delay(30);
+
+}
+
+    
+  
+  
+
+void sendMessage(String Outgoing, byte Destination) {
+  LoRa.beginPacket();             //--> start packet
+  LoRa.write(Destination);        //--> add destination address
+  LoRa.write(LocalAddress);       //--> add sender address
+  LoRa.write(Outgoing.length());  //--> add payload length
+  LoRa.print(Outgoing);           //--> add payload
+  LoRa.endPacket();
+  Serial.println(" ");              //--> finish packet and send it
+  Serial.print("Send to:");
+ // Serial.print(Destination);
+  Serial.print( String(Destination, HEX));
+    Serial.println(" "); 
+  Serial.print("Message length:");
+  Serial.print(Outgoing.length());
+    Serial.println(" "); 
+  Serial.print("Message:");
+  Serial.print(Outgoing);
+    Serial.println(" "); 
+     onReceive(LoRa.parsePacket());
+    Serial.println("_________________________"); 
+
+}
+//________________________________________________________________________________ 
+
+//________________________________________________________________________________ Subroutines for receiving data (LoRa Ra-02).
+
+//-----------------------
+void onReceive(int packetSize) {
+  if (packetSize == 0) return;  //--> if there's no packet, return
+
+  //---------------------------------------- read packet header bytes:
+  int recipient = LoRa.read();        //--> recipient address
+    if (recipient != LocalAddress) {
+  // Serial.println("This message is not for me.");
+    return;}
+  byte sender = LoRa.read();          //--> sender address
+  byte incomingLength = LoRa.read();  //--> incoming msg length
+  //---------------------------------------- 
+
+  // Clears Incoming variable data.
+  Incoming = "";
+
+  //---------------------------------------- Get all incoming data.
+  while (LoRa.available()) {
+    Incoming += (char)LoRa.read();
+  }
+  //---------------------------------------- 
+  if(0x11== sender)
+  {
+MASTER_Incoming=Incoming;
+
+  }
+  else if(0x21== sender)
+  {
+SLAVE_Incoming=Incoming;
+
+  }
+  Serial.println();
+  Serial.println("Received from: 0x" + String(sender, HEX));
+  Serial.println("Message length: " + String(incomingLength));
+  Serial.println("Message: ******************************************************************************" + Incoming);
+  
+}
+
+void watt(){
+    voltage = pzem.voltage();
+     current = pzem.current();
+     power = pzem.power();
+     energy = pzem.energy();
+     frequency = pzem.frequency();
+     pf = pzem.pf();
+     Serial.println(voltage);
+     Serial.println(current);
+     Serial.println(power);
+     Serial.println(energy);
+  
+     
+}
+
+void lum(){
+  rtc.refresh();
+  
+  if (bh1750_a.measurementReady()) {
+    light_level_a = bh1750_a.readLightLevel();
+  }
+
+  if (bh1750_b.measurementReady()) {
+    light_level_b = bh1750_b.readLightLevel();
+  }
+  Serial.print("Light Level : ");
+  Serial.println(light_level_a);
+  Serial.print("Environmental Light : ");
+  Serial.println(light_level_b);
+  
+
+  Serial.println("Current Date & Time: ");
+  Serial.print(rtc.year());
+  Serial.print('/');
+  Serial.print(rtc.month());
+  Serial.print('/');
+  Serial.print(rtc.day());
+
+  Serial.print(" (");
+  Serial.print(daysOfTheWeek[rtc.dayOfWeek()-1]);
+  Serial.print(") ");
+
+  Serial.print(rtc.hour());
+  Serial.print(':');
+  Serial.print(rtc.minute());
+  Serial.print(':');
+  Serial.println(rtc.second());
+
+  Serial.print("Temperature: ");
+  Serial.print(rtc.temp()  / 100);
+  Serial.print("\xC2\xB0");
+  Serial.println("C");
+  Serial.println("=========================");
+  
+}
+
+void gyro(){
+  // Read the analog sensor values
+  int xValue = analogRead(xPin);
+  int yValue = analogRead(yPin);
+  int zValue = analogRead(zPin);
+
+  // Convert the analog values to acceleration in g
+  float xAcc = (xValue - 512.0) / 102.3; // Assuming 330 mV/g sensitivity for X-axis
+  float yAcc = (yValue - 512.0) / 102.3; // Assuming 330 mV/g sensitivity for Y-axis
+  float zAcc = (zValue - 512.0) / 102.3; // Assuming 330 mV/g sensitivity for Z-axis
+
+  // Calculate roll angle in degrees
+   roll = atan2(yAcc, zAcc) * 180.0 / PI;
+
+  // Print the acceleration values, roll angle, and tilt direction
+//  Serial.print("X-Axis: ");
+//  Serial.print(xAcc);
+//  Serial.print(" g\t");
+
+//  Serial.print("Y-Axis: ");
+//  Serial.print(yAcc);
+//  Serial.print(" g\t");
+
+//  Serial.print("Z-Axis: ");
+//  Serial.print(zAcc);
+//  Serial.print(" g\t");
+
+  Serial.print("Roll: "); 
+  Serial.print(roll);
+  Serial.print(" degrees\t");
+
+
+}
+
+
+
+void pwm(){
+  //potValue = analogRead(potPin);
+  int m=map(potValue,0,4095,0,255);
+  dacWrite(25,m);
+  Serial.println("potValue :");
+  Serial.print(potValue);
+   // Serial.println(m);
+  Serial.println("....................................");
+
+}

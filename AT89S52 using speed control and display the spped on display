@@ -1,0 +1,93 @@
+#include <AT89S52.h>
+#include <stdio.h>
+#define DATA P2
+
+
+#define in1 = P2_0;
+#define in2 = P2_1;
+
+
+#define rs = P2_6;
+#define rw = P2_5;
+#define en = P2_7;
+
+
+#define up_button = P1_0;
+#define down_button = P1_1;
+
+
+unsigned int adc_value = 0;
+float voltage = 0.0;
+float motor_speed = 0.0;
+char buffer[16];
+
+void pwm_init()
+{
+    TMOD = (TMOD & 0xF0) | 0x01; 
+    TH0 = 0x00; 
+    TL0 = 0x00;
+    TR0 = 1; 
+}
+ 
+void set_motor_speed(float speed)
+{
+    if(speed > 0)
+    {
+       P2_0 = 1;
+       P2_1 = 0;
+    }
+    else if(speed < 0)
+    {
+        P2_0 = 0;
+        P2_1 = 1;
+    }
+    else
+    {
+      P2_0 = 0;
+      P2_1 = 0;
+    }
+   
+    TH0 = 0xFF;
+    TL0 = (unsigned char)(200 - abs(speed));
+}
+
+
+void main()
+{
+    lcd_init();
+    pwm_init();
+
+    while(1)
+    {
+        adc_value = read_adc();
+        voltage = (adc_value * 5.0) / 1023.0;
+        motor_speed = (voltage - 2.5) * 2.0; 
+
+        if(P1_0 == 0)
+        {
+            motor_speed += 10.0;
+            if(motor_speed > 100.0)
+            {
+                motor_speed = 100.0;
+            }
+            delay_ms(200);
+        }
+
+        if(P1_1 == 0)
+        {
+            motor_speed -= 10.0; 
+            if(motor_speed < -100.0)
+            {
+                motor_speed = -100.0;
+            }
+            delay_ms(200);
+        }
+
+        set_motor_speed(motor_speed);
+        sprintf(buffer, "Speed: %4.1f", motor_speed); 
+        lcd_command(0x80); 
+        lcd_string("DC Motor Control");
+        lcd_command(0xC0);
+        lcd_string(buffer); 
+    }
+}

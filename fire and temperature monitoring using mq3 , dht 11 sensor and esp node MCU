@@ -1,0 +1,67 @@
+#include <Wire.h>
+#include <DHT.h>
+#include <BlynkSimpleEsp8266.h>
+#include <LiquidCrystal_I2C.h>
+
+
+char auth[] = "xxxxxxxxxxxxxxxxxxxx";
+char ssid[] = "hello";
+char pass[] = "123456789";
+
+
+#define DHT_PIN D0    // DHT11 sensor pin
+#define MQ_PIN A0    // MQ-3 sensor analog pin
+#define SDA_PIN D1    // I2C SDA pin
+#define SCL_PIN D2    // I2C SCL pin
+
+#define LCD_ADDR 0x27
+
+#define DHT_TEMP_VPIN V1
+#define DHT_HUMIDITY_VPIN V2
+#define MQ_VPIN V3
+
+DHT dht(DHT_PIN, DHT11);
+
+LiquidCrystal_I2C lcd(LCD_ADDR, 16, 2);
+
+void setup() {
+  Serial.begin(115200);
+
+  Blynk.begin(auth, ssid, pass);
+
+  dht.begin();
+
+  Wire.begin(SDA_PIN, SCL_PIN);
+
+  lcd.begin(16, 2);
+  lcd.backlight();
+}
+
+void loop() {
+  Blynk.run();
+ 
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+  if (!isnan(humidity) && !isnan(temperature)) {
+    Blynk.virtualWrite(DHT_TEMP_VPIN, temperature);
+    Blynk.virtualWrite(DHT_HUMIDITY_VPIN, humidity);
+  }
+
+ 
+  int mqValue = analogRead(MQ_PIN);
+  Blynk.virtualWrite(MQ_VPIN, mqValue);
+
+  
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("T: ");
+  lcd.print(temperature);
+  lcd.print("C H: ");
+  lcd.print(humidity);
+  lcd.print("%");
+  lcd.setCursor(0, 1);
+  lcd.print("MQ: ");
+  lcd.print(mqValue);
+
+  delay(1000);  
+}

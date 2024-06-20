@@ -1,0 +1,202 @@
+#include <WiFi.h>
+#include <WiFiClient.h> 
+#include <WebServer.h>
+#include <HTTPClient.h>
+#include <PZEM004Tv30.h>
+#define  host1 "https://pgcresearch.pavantech.in/SIH_STREET_LIGHT/pages/Getstatus.php"
+
+#if !defined(PZEM_RX_PIN) && !defined(PZEM_TX_PIN)
+#define PZEM_RX_PIN 16
+#define PZEM_TX_PIN 17
+#endif
+#if !defined(PZEM_SERIAL)
+#define PZEM_SERIAL Serial2
+#endif
+#if defined(ESP32)
+PZEM004Tv30 pzem(PZEM_SERIAL, PZEM_RX_PIN, PZEM_TX_PIN);
+#elif defined(ESP8266)
+#else
+PZEM004Tv30 pzem(PZEM_SERIAL);
+#endif
+int Led_OnBoard = 2;                  
+                  
+const char* ssid = "iot";  // Streetlight                    
+ const char* password = "1234567891055"; // eee123!@#
+    char light1;
+    char light2;
+    char light3;
+    char light4;
+    char light5;
+    char intensity1;
+    char intensity2;
+    char intensity3;
+    char intensity4;
+    char intensity5;
+    int potValue = 0;
+ void setup() {
+ Serial.begin(115200);
+ 
+  delay(1000);
+  pinMode(Led_OnBoard, OUTPUT);       
+   pinMode(5,OUTPUT);
+   pinMode(4,OUTPUT);
+  WiFi.mode(WIFI_OFF);        
+  delay(1000);
+ WiFi.mode(WIFI_STA);        
+  
+  WiFi.begin(ssid, password);     
+  Serial.println("");
+
+  Serial.print("Connecting"); 
+   
+  while (WiFi.status() != WL_CONNECTED) {
+    digitalWrite(Led_OnBoard, LOW);
+    delay(250);
+    Serial.print(".");
+    digitalWrite(Led_OnBoard, HIGH);
+    delay(250);
+  }
+
+  digitalWrite(Led_OnBoard, HIGH);
+ 
+  Serial.println("");
+  Serial.println("Connected to Network/SSID");
+
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP()); 
+}
+
+void loop() {
+
+  if(WiFi.status()== WL_CONNECTED){
+        
+      WiFiClient client;
+      HTTPClient http;   
+                                                                          
+    float voltage1 = pzem.voltage();
+    float current1 = pzem.current();
+    float power1 = pzem.power();
+    float energy1 = pzem.energy();
+    float frequency1 = pzem.frequency();
+    float pf1 = pzem.pf(); 
+  
+String voltage, current,power,powerFactor, energy,frequency,Latitude,Longitude,LuxEnvironment,postData;
+   double Load_1Voltage=voltage1;
+   double  Load_1Current=current1;
+   double  Load_2Current=power1;
+   double  Load_3Current=frequency1;
+   double  Load_4Current=pf1;
+   double  Load_5Current=energy1;
+   double Latitude_1=10002030;
+   double Longitude_2=345757557;
+   double LuxEnvironment_3=23415657;
+delay(1000);
+
+  voltage = String(Load_1Voltage);  
+  current = String(Load_1Current);  
+  power= String(Load_2Current);
+  powerFactor = String(Load_4Current);
+ energy = String(Load_5Current);
+  frequency = String(Load_3Current);
+  Latitude=String(Latitude_1);
+  Longitude=String(Longitude_2);
+  LuxEnvironment=String(LuxEnvironment_3);
+  postData ="voltage="+voltage+"&current="+current+"&power="+power+"&powerFactor="+powerFactor+"&energy="+energy+"&frequency="+frequency+"&Latitude="+Latitude+"&Longitude="+Longitude+"&LuxEnvironment="+LuxEnvironment;
+
+   http.begin(client,"https://pgcresearch.pavantech.in/SIH_STREET_LIGHT/uploadZoneDB.php");
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");    
+ 
+  int httpCode = http.POST(postData);   
+  String payload = http.getString();    
+
+ 
+  Serial.println(httpCode);   
+  Serial.println(payload);   
+ 
+ Serial.println("voltage="+voltage+"&current="+current+"&power="+power+"&powerFactor="+powerFactor+"&energy="+energy+"&frequency="+frequency+"&Latitude="+Latitude+"&Longitude="+Longitude+"&LuxEnvironment="+LuxEnvironment);
+   
+
+  http.end();  
+
+  delay(4000);  
+  digitalWrite(Led_OnBoard, LOW);
+  delay(1000);
+  digitalWrite(Led_OnBoard, HIGH);
+          }
+       HTTPClient http1;
+       http1.begin(host1);
+       http1.addHeader("Content-Type", "application/x-www-form-urlencoded");
+       int httpCode1=http1.GET();
+       String payload=http1.getString(); // get data from webhost continously
+       Serial.println(payload);
+      processPayload(payload);
+        if(light3 == '1'){
+          digitalWrite(4,0);
+          Serial.print("on");
+        }
+        if(light3 == '0'){
+          digitalWrite(4,1);
+          Serial.print("off");
+        }
+        if(intensity3 == '0')
+          {
+            potValue=0 ;
+            pwm();
+            Serial.println("potValue: "+potValue);
+            
+          }
+        else if(intensity3 =='1' )
+          {
+           potValue= 120;
+           pwm();
+            Serial.println("potValue: "+potValue);
+            
+          }
+        else if(intensity3 =='2' )
+          {
+            
+            potValue= 160 ;
+            pwm();
+            Serial.println("potValue: "+potValue);
+
+          }
+        else if(intensity3 =='3')
+          {
+          
+            potValue=250 ;
+            pwm();
+            Serial.println("potValue: "+potValue);
+          }
+        else if(intensity3 =='4' )
+          {
+           
+            potValue=1500;
+            pwm();   
+            Serial.println("potValue: "+potValue);
+            
+          }        
+    
+  }
+
+  void pwm(){
+  int m=map(potValue,0,4095,0,255);
+  dacWrite(5,m);
+  Serial.println("potValue :");
+  Serial.print(potValue);
+  Serial.println("...........");
+
+}
+void processPayload(String data) {
+  if (data.length() == 10) {
+   light1 = data[0];
+   light2 = data[1];
+   light3 = data[2];
+   light4 = data[3];
+    light5 = data[4];
+    intensity1 = data[5];
+    intensity2 = data[6];
+    intensity3 = data[7];
+    intensity4 = data[8];
+     intensity5 = data[9];
+  }
+  }

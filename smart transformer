@@ -1,0 +1,112 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h> 
+#include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
+#include <PZEM004Tv30.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+PZEM004Tv30 pzem(D3, D4); 
+
+#define WIFI_SSID "hello"
+#define WIFI_PASSWORD "123456789"
+
+ void setup() {
+ Serial.begin(115200);
+ pinMode(D5,OUTPUT);
+  Wire.begin();
+  lcd.init();
+  lcd.backlight(); 
+  lcd.setCursor(0, 0);
+  lcd.print("IOT Based Smart");
+  lcd.setCursor(0, 1);
+  lcd.print("Transformer Kit ");
+  delay(2000);
+   lcd.clear();
+ WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+ Serial.print("Connecting to Wi-Fi");
+ lcd.print("Connecting.......   ");
+  while (WiFi.status() != WL_CONNECTED){
+    Serial.print(".");
+   
+    delay(300);
+  }
+  Serial.println();
+  Serial.print("Connected with IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.println();
+}
+
+void loop() {
+
+  if(WiFi.status()== WL_CONNECTED){
+        
+      WiFiClient client;
+      HTTPClient http;   
+                                                                                  /* after 4000 count or 800 milli seconds (0.8 second), do the calculation and display value*/
+    float voltage = pzem.voltage();
+    float current = pzem.current();
+    float power = pzem.power();
+    float energy = pzem.energy();
+    float frequency = pzem.frequency();
+    float pf = pzem.pf(); 
+     digitalWrite(D5,1);
+   delay(500);
+String Load_1VoltagePost,Load_1CurrentPost,Load_2CurrentPost,Load_3CurrentPost,Load_4CurrentPost,Load_5CurrentPost,postData;
+ double Load_1Voltage=voltage;
+ double  Load_1Current=current;
+  double  Load_2Current=power;
+   double  Load_3Current=frequency;
+   double  Load_4Current=pf;
+   double  Load_5Current=energy;
+delay(1000);
+digitalWrite(D5,1);
+delay(500);
+  Load_1VoltagePost = String(Load_1Voltage);   //String to interger conversion
+  Load_1CurrentPost = String(Load_1Current);   //String to interger conversion
+  Load_2CurrentPost = String(Load_2Current);
+  Load_3CurrentPost = String(Load_3Current);
+  Load_4CurrentPost = String(Load_4Current);
+  Load_5CurrentPost = String(Load_5Current);
+  postData ="Load_1Voltage=" + Load_1VoltagePost + "&Load_1Current=" + Load_1CurrentPost +"&Load_2Current=" + Load_2CurrentPost+"&Load_3Current=" + Load_3CurrentPost+"&Load_4Current=" + Load_4CurrentPost+"&Load_5Current=" + Load_5CurrentPost ;
+  http.begin(client,"http://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");    //Specify content-type header
+ 
+  int httpCode = http.POST(postData); 
+  String payload = http.getString();   
+
+ 
+  Serial.println(httpCode);   
+  Serial.println(payload);    
+  Serial.println("Load_1Voltage=" + Load_1VoltagePost + "&Load_1Current=" + Load_1CurrentPost +"&Load_2Current=" + Load_2CurrentPost+"&Load_3Current=" + Load_3CurrentPost+"&Load_4Current=" + Load_4CurrentPost+"&Load_5Current=" + Load_5CurrentPost);
+
+
+  http.end(); 
+   digitalWrite(D5,1);
+   delay(500); 
+   
+    lcd.clear();
+    lcd.print("Voltage=");
+    lcd.print(voltage);
+    lcd.setCursor(0, 1);
+    lcd.print("Current=");
+    lcd.print(current);
+    delay(2000);
+    lcd.clear();
+    lcd.print("Power=");
+    lcd.print(power);
+    lcd.setCursor(0,1);
+    lcd.print("PF=");
+    lcd.print(pf);
+    delay(2000);
+    lcd.clear();
+    lcd.print("Energy=");
+    lcd.print(energy);
+    lcd.setCursor(0,1);
+    lcd.print("Frequency=");
+    lcd.print(frequency);
+  delay(3000); 
+          }
+ 
+  }

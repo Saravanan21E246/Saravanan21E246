@@ -1,0 +1,67 @@
+ #include <PZEM004Tv30.h>
+ 
+PZEM004Tv30 pzem1(D1, D2);
+PZEM004Tv30 pzem2(D3, D4);
+PZEM004Tv30 pzem3(D5, D6);
+void setup() {
+  Serial.begin(9600);
+}
+void loop() {
+  float voltage1, current1, power1, pf1,voltage2, current2, power2, pf2,voltage3, current3, power3, pf3;
+  voltage1 = pzem1.voltage();
+  current1 = pzem1.current();
+  power1 = pzem1.power();
+  pf1 = pzem1.pf();
+   
+  voltage2 = pzem2.voltage();
+  current2 = pzem2.current();
+  power2 = pzem2.power();
+  pf2 = pzem2.pf();
+    
+  voltage3 = pzem3.voltage();
+  current3 = pzem3.current();
+  power3 = pzem3.power();
+  pf3 = pzem3.pf();
+
+ 
+  
+  Serial.print("Voltage1 =");
+  Serial.print(voltage1);
+
+  Serial.print("Current1 =");
+  Serial.print(current1);
+  
+  Serial.print("Power1 =");
+  Serial.print(power1);
+
+  Serial.print("Power Factor1 =");
+  Serial.print(pf1);
+  delay(2000);
+   
+ 
+  Serial.print("Voltage2 =");
+  Serial.print(voltage2);
+ 
+  Serial.print("Current2 =");
+  Serial.print(current2);
+ 
+  Serial.print("Power2 =");
+  Serial.print(power1);
+
+  Serial.print("Power Factor2 =");
+  Serial.print(pf2);
+   delay(2000);
+ 
+  Serial.print("Voltage3 =");
+  Serial.print(voltage3);
+ 
+  Serial.print("Current3 =");
+  Serial.print(current3);
+ 
+  Serial.print("Power3 =");
+  Serial.print(power3);
+
+  Serial.print("Power Factor3 =");
+  Serial.print(pf3);
+  delay(3000);
+}     

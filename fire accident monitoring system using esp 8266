@@ -1,0 +1,65 @@
+ #define BLYNK_TEMPLATE_ID "TMPL3s9J6Pa_Y"
+#define BLYNK_TEMPLATE_NAME "realtime monitoring system"
+#define BLYNK_AUTH_TOKEN "X1EiMulyTPWCt0C_riMBYkTvbzWv5MoX"
+
+#define BLYNK_PRINT Serial
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+#include <DHT.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+#define DHTPIN D3     
+#define DHTTYPE DHT11
+#define MQ3PIN A0     
+char auth[] = BLYNK_AUTH_TOKEN;
+
+char ssid[] = "hello";
+char pass[] = "123456789";
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(115200);
+    Wire.begin();
+  lcd.init();
+  lcd.backlight(); 
+  Blynk.begin(auth, ssid, pass);
+  dht.begin();
+}
+
+void loop() {
+  Blynk.run();
+
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+
+  if (!isnan(humidity) && !isnan(temperature)) {
+    Blynk.virtualWrite(V2, humidity);  // Virtual Pin V5 for humidity
+    Blynk.virtualWrite(V0, temperature);  // Virtual Pin V6 for temperature
+  }
+
+  int X= analogRead(MQ3PIN);
+   float mq3Value = X/10;
+  float voltage = mq3Value * 5.0;
+  Blynk.virtualWrite(V1, voltage);  // Virtual Pin V7 for MQ-3 sensor voltage
+  Blynk.virtualWrite(V3, mq3Value);  // Virtual Pin V8 for raw MQ-3 sensor value
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("humidity=");
+    lcd.print(humidity);
+        lcd.setCursor(0, 1);
+    lcd.print("temperature=");
+    lcd.print(temperature);
+    delay(1000);
+     lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("mq3 =");
+    lcd.print(mq3Value);
+        lcd.setCursor(0, 1);
+    lcd.print("pressure=");
+    lcd.print(voltage);
+  delay(1000);
+}

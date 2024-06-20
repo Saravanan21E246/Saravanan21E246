@@ -1,0 +1,23 @@
+#include <SPI.h>
+#include <LoRa.h>
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial);
+
+  if (!LoRa.begin(433E6)) {
+    Serial.println("Starting LoRa failed!");
+    while (1);
+  }
+
+  Serial.println("Role: Transmitter");
+}
+
+void loop() {
+  Serial.println("Sending data to LoRa32...");
+  LoRa.beginPacket();
+  LoRa.print("Data from TTGO T1 to LoRa32");
+  LoRa.endPacket();
+
+  delay(5000);
+  }

@@ -1,0 +1,18 @@
+#include <AT89S52.h>
+
+sbit buzzer_pin = P1^0;
+sbit smoke_sensor_pin = P2^0;
+
+void main() {
+    buzzer_pin = 0;
+    smoke_sensor_pin = 1;
+
+    while(1) {
+        if (smoke_sensor_pin == 0) {
+            buzzer_pin = 1;
+        }
+        else {
+            buzzer_pin = 0;
+        }
+    }
+}

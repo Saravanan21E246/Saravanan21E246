@@ -1,0 +1,344 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <WebServer.h>
+#include "DHT.h"
+#define DHTPIN 22        // including the library of DHT11 temperature and humidity sensor
+#define DHTTYPE DHT11   // DHT 11
+DHT dht(DHTPIN, DHTTYPE); 
+#define   ADC1_0 17
+#define   ADC1_1 5
+#define HOST "http://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"         // Enter HOST URL without "http:// "  and "/" at the end of URL
+
+#define WIFI_SSID "prabha"            // WIFI SSID here                                   
+#define WIFI_PASSWORD "prabha@2223"
+
+#define  host1 "http://xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+String val;
+String val2;
+
+
+String sendval, sendval2, postData;
+int rain,soil;
+
+void setup(void)
+{
+   pinMode(33,OUTPUT);
+   pinMode(32,OUTPUT);
+  //  pinMode(32,OUTPUT);
+   Serial.begin(115200); 
+Serial.println("Communication Started \n\n");  
+delay(1000);
+  WiFi.mode(WIFI_STA);           
+WiFi.begin(WIFI_SSID, WIFI_PASSWORD);                                     //try to connect with wifi
+Serial.print("Connecting to ");
+Serial.print(WIFI_SSID);
+while (WiFi.status() != WL_CONNECTED) 
+{ Serial.print(".");
+    delay(500); }
+
+Serial.println();
+Serial.print("Connected to ");
+Serial.println(WIFI_SSID);
+Serial.print("IP Address is : ");
+Serial.println(WiFi.localIP());    //print local IP address
+
+delay(30);
+
+// pinMode(LED_BUILTIN, OUTPUT);
+  dht.begin();
+  
+  delay(700);
+
+}
+void loop() {
+  HTTPClient http1;
+http1.begin(host1);
+  http1.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  int httpCode1=http1.GET();
+  String payload=http1.getString(); // get data from webhost continously
+  Serial.println(payload);
+  if(payload == "1")  // if data == 1 -> LED ON
+  {
+    digitalWrite(32,HIGH);
+    }
+   else if (payload == "0") // if data == 0 -> LED OFF
+   {
+    digitalWrite(32,LOW);
+    }
+  // delay(500);
+
+
+
+
+
+
+  //****************
+
+
+    sendval = dht.readHumidity();
+    sendval2 = dht.readTemperature();  
+    rain =  digitalRead(ADC1_0);
+    soil= digitalRead(ADC1_1);    
+    Serial.println(sendval); 
+    Serial.println(sendval2); 
+    Serial.println(rain); 
+    Serial.println(soil); 
+  // delay(5000);
+  HTTPClient http;    // http object of clas HTTPClient
+if(rain == 0)  // if data == 1 -> LED ON
+  {
+    digitalWrite(33,HIGH);
+    }
+   else if (rain == 1) // if data == 0 -> LED OFF
+   {
+    digitalWrite(33,LOW);
+    }
+    if(soil == 0)  // if data == 1 -> LED ON
+  {
+    digitalWrite(32,LOW);
+    } 
+
+// Convert integer variables to string
+if(payload=="1"){
+ String c="Motor On";  
+          postData = "&c=" + c;
+
+          http.begin("http://pgcresearch.pavantech.in/clock/motorStatus.php");              // Connect to host where MySQL databse is hosted
+          http.addHeader("Content-Type", "application/x-www-form-urlencoded");            //Specify content-type header
+
+            
+          
+          int httpCode = http.POST(postData);   // Send POST request to php file and store server response code in variable named httpCode
+          Serial.println(" motorStatus = "+c);
+
+
+          // if connection eatablished then do this
+          if (httpCode ==200) { Serial.println("Values uploaded successfully."); Serial.println(httpCode); 
+          String webpage = http.getString();    // Get html webpage output and store it in a string
+          //Serial.println(webpage + "\n"); 
+          }
+
+        else { 
+          Serial.println(httpCode); 
+          Serial.println("Failed to upload values. \n"); 
+          http.end(); 
+          return; }
+
+}if(payload=="0"){
+ String c="Motor Off";  
+          postData = "&c=" + c;
+
+          http.begin("http://pgcresearch.pavantech.in/clock/motorStatus.php");              // Connect to host where MySQL databse is hosted
+          http.addHeader("Content-Type", "application/x-www-form-urlencoded");            //Specify content-type header
+
+            
+          
+          int httpCode = http.POST(postData);   // Send POST request to php file and store server response code in variable named httpCode
+          Serial.println(" motorStatus = "+c);
+
+
+          // if connection eatablished then do this
+          if (httpCode ==200) { Serial.println("Values uploaded successfully."); Serial.println(httpCode); 
+          String webpage = http.getString();    // Get html webpage output and store it in a string
+          //Serial.println(webpage + "\n"); 
+          }
+
+        else { 
+          Serial.println(httpCode); 
+          Serial.println("Failed to upload values. \n"); 
+          http.end(); 
+          return; }
+
+}
+
+
+
+
+
+if(sendval2 !=NULL){
+          sendval = String(sendval);  
+          sendval2 = String(sendval2); 
+          
+          postData = "sendval=" + sendval + "&sendval2=" + sendval2;
+
+          http.begin("http://pgcresearch.pavantech.in/clock/dbwrite.php");              // Connect to host where MySQL databse is hosted
+          http.addHeader("Content-Type", "application/x-www-form-urlencoded");            //Specify content-type header
+
+            
+          
+          int httpCode = http.POST(postData);   // Send POST request to php file and store server response code in variable named httpCode
+          Serial.println("Values are, sendval = " + sendval + " and sendval2 = "+sendval2);
+
+
+          // if connection eatablished then do this
+          if (httpCode ==200) { Serial.println("Values uploaded successfully."); 
+          Serial.println(httpCode); 
+          String webpage = http.getString();    // Get html webpage output and store it in a string
+          //Serial.println(webpage + "\n"); 
+           }
+
+        else { 
+          Serial.println(httpCode); 
+          Serial.println("Failed to upload values. \n"); 
+          http.end(); 
+          return;
+          }
+
+}
+if(sendval !=NULL){
+          sendval = String(sendval);  
+          postData = "&sendval=" + sendval;
+
+          http.begin("http://pgcresearch.pavantech.in/clock/humidity.php");              // Connect to host where MySQL databse is hosted
+          http.addHeader("Content-Type", "application/x-www-form-urlencoded");            //Specify content-type header
+
+            
+          
+          int httpCode = http.POST(postData);   // Send POST request to php file and store server response code in variable named httpCode
+          Serial.println(" Humidity = "+sendval);
+
+
+          // if connection eatablished then do this
+          if (httpCode ==200) { Serial.println("Values uploaded successfully."); 
+          Serial.println(httpCode); 
+          String webpage = http.getString();    // Get html webpage output and store it in a string
+          //Serial.println(webpage + "\n"); 
+           }
+
+        else { 
+          Serial.println(httpCode); 
+          Serial.println("Failed to upload values. \n"); 
+          http.end(); 
+          return;
+          }
+
+}
+
+
+if(rain==0){
+          String a="Rainy";  
+          postData ="&a=" + a;
+
+          http.begin("http://pgcresearch.pavantech.in/clock/rainSensor.php");              // Connect to host where MySQL databse is hosted
+          http.addHeader("Content-Type", "application/x-www-form-urlencoded");            //Specify content-type header
+
+            
+          
+          int httpCode = http.POST(postData);   // Send POST request to php file and store server response code in variable named httpCode
+          Serial.println("rainStatus = "+a);
+
+
+          // if connection eatablished then do this
+          if (httpCode ==200) { Serial.println("Values uploaded successfully."); 
+          Serial.println(httpCode); 
+          String webpage = http.getString();    // Get html webpage output and store it in a string
+          //Serial.println(webpage + "\n"); 
+           }
+
+        else { 
+          Serial.println(httpCode); 
+          Serial.println("Failed to upload values. \n"); 
+          http.end(); 
+          return;
+          }
+
+}
+
+else if (rain==1) {
+          String a="No Rain";  
+          postData ="&a=" + a;
+
+          http.begin("http://pgcresearch.pavantech.in/clock/rainSensor.php");              // Connect to host where MySQL databse is hosted
+          http.addHeader("Content-Type", "application/x-www-form-urlencoded");            //Specify content-type header
+
+            
+          
+          int httpCode = http.POST(postData);   // Send POST request to php file and store server response code in variable named httpCode
+          Serial.println("rainStatus = "+a );
+
+
+          // if connection eatablished then do this
+          if (httpCode ==200) { Serial.println("Values uploaded successfully."); 
+          Serial.println(httpCode); 
+          String webpage = http.getString();    // Get html webpage output and store it in a string
+          //Serial.println(webpage + "\n"); 
+          }
+
+        else { 
+          Serial.println(httpCode); 
+          Serial.println("Failed to upload values. \n"); 
+          http.end(); 
+          return; }
+
+        }
+        
+ if (soil==0) {
+ 
+          String b="Water Enough";  
+          postData = "&b=" + b;
+
+          http.begin("http://pgcresearch.pavantech.in/clock/soilSensor.php");              // Connect to host where MySQL databse is hosted
+          http.addHeader("Content-Type", "application/x-www-form-urlencoded");            //Specify content-type header
+
+            
+          
+          int httpCode = http.POST(postData);   // Send POST request to php file and store server response code in variable named httpCode
+          Serial.println("soilStatus = "+b );
+
+
+          // if connection eatablished then do this
+          if (httpCode ==200) { 
+          Serial.println("Values uploaded successfully."); 
+          Serial.println(httpCode); 
+          String webpage = http.getString();    // Get html webpage output and store it in a string
+          //Serial.println(webpage + "\n"); 
+          }
+
+        else { 
+          Serial.println(httpCode); 
+          Serial.println("Failed to upload values. \n"); 
+          http.end(); 
+          return; 
+          }
+
+        }
+
+        
+else if (soil==1) {
+
+          String b="Need Water";  
+          postData = "&b=" + b;
+
+          http.begin("http://pgcresearch.pavantech.in/clock/soilSensor.php");              // Connect to host where MySQL databse is hosted
+          http.addHeader("Content-Type", "application/x-www-form-urlencoded");            //Specify content-type header
+
+            
+          
+          int httpCode = http.POST(postData);   // Send POST request to php file and store server response code in variable named httpCode
+          Serial.println(" soilStatus = "+b );
+
+
+          // if connection eatablished then do this
+          if (httpCode ==200) { Serial.println("Values uploaded successfully."); Serial.println(httpCode); 
+          String webpage = http.getString();    // Get html webpage output and store it in a string
+          //Serial.println(webpage + "\n"); 
+          }
+
+        else { 
+          Serial.println(httpCode); 
+          Serial.println("Failed to upload values. \n"); 
+          http.end(); 
+          return; }
+
+        }
+
+// if failed to connect then return and restart
+
+
+
+delay(5000); 
+// digitalWrite(LED_BUILTIN, LOW);
+// delay(3000);
+// digitalWrite(LED_BUILTIN, HIGH);
+}
